@@ -1,0 +1,362 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* React Easy Crop styles for better mobile experience */
+.reactEasyCrop_Container {
+  touch-action: none;
+}
+
+.reactEasyCrop_CropArea {
+  touch-action: none;
+}
+
+/* Custom slider styles for image editor */
+.slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.slider::-webkit-slider-track {
+  background: #e5e7eb;
+  height: 8px;
+  border-radius: 4px;
+}
+
+.dark .slider::-webkit-slider-track {
+  background: #374151;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  background: #3b82f6;
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.slider::-webkit-slider-thumb:hover {
+  background: #2563eb;
+  transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.slider::-moz-range-track {
+  background: #e5e7eb;
+  height: 8px;
+  border-radius: 4px;
+  border: none;
+}
+
+.dark .slider::-moz-range-track {
+  background: #374151;
+}
+
+.slider::-moz-range-thumb {
+  background: #3b82f6;
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.slider::-moz-range-thumb:hover {
+  background: #2563eb;
+  transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Smooth animations */
+.image-editor-modal {
+  backdrop-filter: blur(8px);
+}
+
+/* Touch-friendly button styles */
+@media (max-width: 768px) {
+  .touch-button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+@layer base {
+  /**
+   * Tailwind CSS theme
+   * tailwind.config.ts expects the following color variables to be expressed as HSL values.
+   * A different format will require also updating the theme in tailwind.config.ts.
+  */
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 262 83% 58%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Brand Colors - Sophisticated Blue/Teal Gradient */
+    --brand-50: 210 100% 98%;
+    --brand-100: 210 95% 95%;
+    --brand-200: 210 88% 89%;
+    --brand-300: 210 80% 81%;
+    --brand-400: 210 75% 70%;
+    --brand-500: 210 85% 58%;
+    --brand-600: 210 90% 48%;
+    --brand-700: 210 92% 40%;
+    --brand-800: 210 94% 32%;
+    --brand-900: 210 96% 26%;
+    --brand-950: 210 98% 18%;
+
+    /* Gradient Colors - More sophisticated */
+    --gradient-from: 210 85% 58%;
+    --gradient-via: 195 85% 62%;
+    --gradient-to: 180 85% 66%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 217.2 32.6% 8.5%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 217.2 32.6% 8.5%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 262 83% 58%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 262 83% 58%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 262 83% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 262 83% 58%;
+
+    /* Brand Colors - Dark Mode */
+    --brand-50: 210 98% 18%;
+    --brand-100: 210 96% 26%;
+    --brand-200: 210 94% 32%;
+    --brand-300: 210 92% 40%;
+    --brand-400: 210 90% 48%;
+    --brand-500: 210 85% 58%;
+    --brand-600: 210 75% 70%;
+    --brand-700: 210 80% 81%;
+    --brand-800: 210 88% 89%;
+    --brand-900: 210 95% 95%;
+    --brand-950: 210 100% 98%;
+
+    /* Gradient Colors - Dark Mode */
+    --gradient-from: 210 85% 58%;
+    --gradient-via: 195 85% 62%;
+    --gradient-to: 180 85% 66%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /* Force light mode by default */
+  :root {
+    color-scheme: light;
+  }
+}
+
+@layer utilities {
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+
+  .perspective-2000 {
+    perspective: 2000px;
+  }
+
+  .transform-gpu {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+  }
+
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+
+  .backface-hidden {
+    backface-visibility: hidden;
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-float-slow {
+    animation: float 8s ease-in-out infinite;
+  }
+
+  .animate-pulse-slow {
+    animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .animate-subtle-glow {
+    animation: subtleGlow 4s ease-in-out infinite alternate;
+  }
+
+  .gradient-animation {
+    background: linear-gradient(
+      -45deg,
+      #3b82f6,
+      #1d4ed8,
+      #0891b2,
+      #0e7490,
+      #059669,
+      #047857
+    );
+    background-size: 400% 400%;
+    animation: gradientShift 15s ease infinite;
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px) rotateX(0deg) rotateY(0deg);
+  }
+  50% {
+    transform: translateY(-20px) rotateX(5deg) rotateY(5deg);
+  }
+}
+
+@keyframes subtleGlow {
+  from {
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.1);
+  }
+  to {
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+  }
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* React Perspective Cropper container sizing fixes */
+/* Target the cropper container and its children */
+[data-crop-container] canvas,
+[data-crop-container] img,
+.QuadrilateralCropper canvas,
+.QuadrilateralCropper img {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+}
+
+/* Force consistent sizing for all cropper elements */
+.QuadrilateralCropper {
+  width: 100% !important;
+  height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Override any inline styles from the library */
+.QuadrilateralCropper > * {
+  max-width: 100% !important;
+  max-height: 100% !important;
+}
