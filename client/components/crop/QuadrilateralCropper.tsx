@@ -472,10 +472,31 @@ export default function QuadrilateralCropper({
     if (cornerIndex >= 0) {
       setHoverIndex(cornerIndex);
       setShowZoomLens(true);
-      setZoomLensPos({ 
-        x: e.clientX + 30, 
-        y: e.clientY - 60 
-      });
+      const lensSize = 120;
+      const offset = 24;
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const containerRect = containerRef.current!.getBoundingClientRect();
+
+      const spaceRight = viewportWidth - containerRect.right;
+      const spaceLeft = containerRect.left;
+
+      let lensX: number;
+      if (spaceRight >= lensSize + offset + 20) {
+        lensX = containerRect.right + offset;
+      } else if (spaceLeft >= lensSize + offset + 20) {
+        lensX = containerRect.left - lensSize - offset;
+      } else {
+        lensX = e.clientX + offset;
+        if (lensX + lensSize > viewportWidth - 20) {
+          lensX = e.clientX - lensSize - offset;
+        }
+      }
+
+      let lensY = e.clientY - lensSize / 2;
+      lensY = Math.max(20, Math.min(viewportHeight - lensSize - 20, lensY));
+
+      setZoomLensPos({ x: lensX, y: lensY });
     } else {
       setHoverIndex(null);
       if (dragIndex === null) {
@@ -485,9 +506,9 @@ export default function QuadrilateralCropper({
     
     // Handle dragging
     if (dragIndex !== null) {
-      const containerRect = canvasRef.current.getBoundingClientRect();
-      const offsetX = (containerRect.width - imageDimensions.width) / 2;
-      const offsetY = (containerRect.height - imageDimensions.height) / 2;
+      const canvasRect = canvasRef.current.getBoundingClientRect();
+      const offsetX = (canvasRect.width - imageDimensions.width) / 2;
+      const offsetY = (canvasRect.height - imageDimensions.height) / 2;
       
       const imageX = x - offsetX;
       const imageY = y - offsetY;
@@ -499,11 +520,31 @@ export default function QuadrilateralCropper({
         index === dragIndex ? { x: relativeX, y: relativeY } : corner
       ));
       
-      // Update zoom lens position while dragging
-      setZoomLensPos({ 
-        x: e.clientX + 30, 
-        y: e.clientY - 60 
-      });
+      const lensSize = 120;
+      const offset = 24;
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const containerBounds = containerRef.current!.getBoundingClientRect();
+
+      const spaceRight = viewportWidth - containerBounds.right;
+      const spaceLeft = containerBounds.left;
+
+      let lensX: number;
+      if (spaceRight >= lensSize + offset + 20) {
+        lensX = containerBounds.right + offset;
+      } else if (spaceLeft >= lensSize + offset + 20) {
+        lensX = containerBounds.left - lensSize - offset;
+      } else {
+        lensX = e.clientX + offset;
+        if (lensX + lensSize > viewportWidth - 20) {
+          lensX = e.clientX - lensSize - offset;
+        }
+      }
+
+      let lensY = e.clientY - lensSize / 2;
+      lensY = Math.max(20, Math.min(viewportHeight - lensSize - 20, lensY));
+
+      setZoomLensPos({ x: lensX, y: lensY });
     }
   }, [getCornerAtPosition, dragIndex]);
 
