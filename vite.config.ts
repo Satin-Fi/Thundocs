@@ -41,7 +41,10 @@ function expressPlugin(): Plugin {
     name: "express-plugin",
     apply: "serve",
     async configureServer(server) {
-      const { createServer } = await import("./server/index.ts");
+      const dynamicImport = new Function("specifier", "return import(specifier);") as (
+        specifier: string,
+      ) => Promise<any>;
+      const { createServer } = await dynamicImport("./server/index.ts");
       const app = createServer();
       server.middlewares.use(app);
     },
