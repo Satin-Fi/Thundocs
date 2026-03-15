@@ -56,51 +56,51 @@ const getQuadrilateralCroppedImg = async (
       x: corner.x * img.width,
       y: corner.y * img.height
     }));
-    
+
     console.log('📐 Scaled corners:', scaledCorners.map(p => ({ x: p.x.toFixed(1), y: p.y.toFixed(1) })));
-    
+
     // Calculate bounding box
     const minX = Math.min(...scaledCorners.map(c => c.x));
     const maxX = Math.max(...scaledCorners.map(c => c.x));
     const minY = Math.min(...scaledCorners.map(c => c.y));
     const maxY = Math.max(...scaledCorners.map(c => c.y));
-    
+
     // Set canvas size to bounding box
     outputCanvas.width = maxX - minX;
     outputCanvas.height = maxY - minY;
-    
+
     console.log('📏 Output dimensions:', { width: outputCanvas.width.toFixed(1), height: outputCanvas.height.toFixed(1) });
-    
+
     // Create clipping path using the quadrilateral shape
     outputCtx.save();
-    
+
     // Translate corners to canvas coordinates
     const canvasCorners = scaledCorners.map(corner => ({
       x: corner.x - minX,
       y: corner.y - minY
     }));
-    
+
     // Create quadrilateral clipping path
     outputCtx.beginPath();
     outputCtx.moveTo(canvasCorners[0].x, canvasCorners[0].y);
     canvasCorners.slice(1).forEach(corner => outputCtx.lineTo(corner.x, corner.y));
     outputCtx.closePath();
     outputCtx.clip();
-    
+
     console.log('✂️ Clipping corners:', canvasCorners.map(p => ({ x: p.x.toFixed(1), y: p.y.toFixed(1) })));
-    
+
     // Draw the cropped section of the image
     outputCtx.drawImage(
       img,
       minX, minY, maxX - minX, maxY - minY,
       0, 0, outputCanvas.width, outputCanvas.height
     );
-    
+
     outputCtx.restore();
 
     const dataUrl = outputCanvas.toDataURL('image/jpeg', 0.95);
     console.log('✅ Quadrilateral crop completed');
-    
+
     return dataUrl;
   } catch (error) {
     console.error('❌ Error creating quadrilateral crop:', error);
@@ -114,14 +114,14 @@ export default function QuadrilateralCropper({
   className = '',
 }: QuadrilateralCropperProps) {
   console.log('🔄 QuadrilateralCropper component mounted/re-rendered with image:', image);
-  
+
   const [corners, setCorners] = useState<CropPoint[]>([
     { x: 0.1, y: 0.1 }, // Top-left
     { x: 0.9, y: 0.1 }, // Top-right
     { x: 0.9, y: 0.9 }, // Bottom-right
     { x: 0.1, y: 0.9 }, // Bottom-left
   ]);
-  
+
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const [imageDimensions, setImageDimensions] = useState<ImageDimensions | null>(null);
@@ -142,25 +142,25 @@ export default function QuadrilateralCropper({
     if (imageRef.current && containerRef.current) {
       const img = imageRef.current;
       const container = containerRef.current;
-      
+
       // Use a timeout to ensure layout is stable
       setTimeout(() => {
         const containerRect = container.getBoundingClientRect();
-        
+
         // Calculate the scale to fit image within container with some padding
         const padding = 20; // Add some padding to prevent edge clipping
         const availableWidth = containerRect.width - padding;
         const availableHeight = containerRect.height - padding;
-        
+
         const scale = Math.min(
           availableWidth / img.naturalWidth,
           availableHeight / img.naturalHeight
         );
-        
+
         // Calculate actual displayed dimensions
         const displayWidth = img.naturalWidth * scale;
         const displayHeight = img.naturalHeight * scale;
-        
+
         const dimensions = {
           width: displayWidth,
           height: displayHeight,
@@ -168,12 +168,12 @@ export default function QuadrilateralCropper({
           naturalHeight: img.naturalHeight,
           scale,
         };
-        
+
         console.log('📐 Setting image dimensions:', dimensions);
         setImageDimensions(dimensions);
         setImageLoaded(true);
       }, 100); // Increased timeout for better stability
-      
+
       // Auto-adjust quad corners when image size changes
       if (corners[0].x === 0.1 && corners[0].y === 0.1) {
         const newCorners = [
@@ -185,7 +185,7 @@ export default function QuadrilateralCropper({
         setCorners(newCorners);
         console.log('🔄 Auto-adjusted corners:', newCorners);
       }
-      
+
       // Draw initial overlay
       drawCanvas();
     } else {
@@ -237,94 +237,94 @@ export default function QuadrilateralCropper({
 
     // Get container dimensions for proper canvas sizing
     const containerRect = container.getBoundingClientRect();
-    
+
     // Set canvas size to match the container dimensions
     canvas.width = containerRect.width;
     canvas.height = containerRect.height;
-    
+
     // Calculate the offset to center the image within the canvas
     const offsetX = (containerRect.width - imageDimensions.width) / 2;
     const offsetY = (containerRect.height - imageDimensions.height) / 2;
-    
+
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
+
     // Draw overlay (semi-transparent dark layer)
     ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
+
     // Create quadrilateral clipping area (adjusted for image position)
     ctx.save();
     ctx.globalCompositeOperation = 'destination-out';
     ctx.beginPath();
     ctx.moveTo(
-      offsetX + corners[0].x * imageDimensions.width, 
+      offsetX + corners[0].x * imageDimensions.width,
       offsetY + corners[0].y * imageDimensions.height
     );
-    corners.slice(1).forEach(corner => 
+    corners.slice(1).forEach(corner =>
       ctx.lineTo(
-        offsetX + corner.x * imageDimensions.width, 
+        offsetX + corner.x * imageDimensions.width,
         offsetY + corner.y * imageDimensions.height
       )
     );
     ctx.closePath();
     ctx.fill();
     ctx.restore();
-    
+
     // Draw quadrilateral outline
     ctx.strokeStyle = '#3b82f6';
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(
-      offsetX + corners[0].x * imageDimensions.width, 
+      offsetX + corners[0].x * imageDimensions.width,
       offsetY + corners[0].y * imageDimensions.height
     );
-    corners.slice(1).forEach(corner => 
+    corners.slice(1).forEach(corner =>
       ctx.lineTo(
-        offsetX + corner.x * imageDimensions.width, 
+        offsetX + corner.x * imageDimensions.width,
         offsetY + corner.y * imageDimensions.height
       )
     );
     ctx.closePath();
     ctx.stroke();
-    
+
     // Draw corner handles (adjusted for image position)
     corners.forEach((corner, index) => {
       const isHover = hoverIndex === index;
       const isDragging = dragIndex === index;
-      
+
       // Larger handle when hovering or dragging
       const handleSize = isHover || isDragging ? 14 : 10;
-      
+
       const x = offsetX + corner.x * imageDimensions.width;
       const y = offsetY + corner.y * imageDimensions.height;
-      
+
       // Outer glow effect
       if (isHover || isDragging) {
         ctx.shadowColor = '#3b82f6';
         ctx.shadowBlur = 15;
       }
-      
+
       ctx.fillStyle = isHover || isDragging ? '#ef4444' : '#3b82f6';
       ctx.beginPath();
       ctx.arc(x, y, handleSize, 0, 2 * Math.PI);
       ctx.fill();
-      
+
       // Reset shadow
       ctx.shadowBlur = 0;
-      
+
       // White border
       ctx.strokeStyle = 'white';
       ctx.lineWidth = 3;
       ctx.stroke();
-      
+
       // Corner number
       ctx.fillStyle = 'white';
       ctx.font = 'bold 12px Arial';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-       ctx.fillText((index + 1).toString(), x, y);
-     });
+      ctx.fillText((index + 1).toString(), x, y);
+    });
   }, [corners, hoverIndex, dragIndex, imageLoaded, imageDimensions, containerRef]);
 
   // Draw zoom lens
@@ -359,7 +359,7 @@ export default function QuadrilateralCropper({
     // Draw zoomed image portion
     const sourceX = Math.max(0, mousePos.x - sourceSize / 2);
     const sourceY = Math.max(0, mousePos.y - sourceSize / 2);
-    
+
     if (imageDimensions) {
       const scaleX = img.naturalWidth / imageDimensions.width;
       const scaleY = img.naturalHeight / imageDimensions.height;
@@ -376,14 +376,14 @@ export default function QuadrilateralCropper({
         lensSize
       );
     }
-    
+
     ctx.restore();
-    
+
     // Draw crosshair
     const centerX = lensSize / 2;
     const centerY = lensSize / 2;
     const crosshairLength = 20;
-    
+
     // White background for contrast
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 4;
@@ -394,7 +394,7 @@ export default function QuadrilateralCropper({
     ctx.moveTo(centerX, centerY - crosshairLength);
     ctx.lineTo(centerX, centerY + crosshairLength);
     ctx.stroke();
-    
+
     // Red crosshair on top
     ctx.strokeStyle = '#ff0000';
     ctx.lineWidth = 2;
@@ -404,13 +404,13 @@ export default function QuadrilateralCropper({
     ctx.moveTo(centerX, centerY - crosshairLength);
     ctx.lineTo(centerX, centerY + crosshairLength);
     ctx.stroke();
-    
+
     // Center dot
     ctx.fillStyle = '#ff0000';
     ctx.beginPath();
     ctx.arc(centerX, centerY, 2, 0, 2 * Math.PI);
     ctx.fill();
-    
+
     // Lens border
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 4;
@@ -439,11 +439,11 @@ export default function QuadrilateralCropper({
   // Get corner at position
   const getCornerAtPosition = useCallback((x: number, y: number, tolerance = 25) => {
     if (!imageDimensions || !containerRef.current) return -1;
-    
+
     const containerRect = containerRef.current.getBoundingClientRect();
     const offsetX = (containerRect.width - imageDimensions.width) / 2;
     const offsetY = (containerRect.height - imageDimensions.height) / 2;
-    
+
     for (let i = 0; i < corners.length; i++) {
       const cornerX = offsetX + corners[i].x * imageDimensions.width;
       const cornerY = offsetY + corners[i].y * imageDimensions.height;
@@ -452,23 +452,23 @@ export default function QuadrilateralCropper({
         return i;
       }
     }
-     return -1;
-   }, [corners, imageDimensions, containerRef]);
+    return -1;
+  }, [corners, imageDimensions, containerRef]);
 
   // Mouse move handler
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!imageDimensions || !canvasRef.current) return;
-    
+
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    
+
     setMousePos({ x, y });
 
     // Check if hovering over a corner
     const cornerIndex = getCornerAtPosition(x, y);
-    
+
     if (cornerIndex >= 0) {
       setHoverIndex(cornerIndex);
       setShowZoomLens(true);
@@ -503,23 +503,23 @@ export default function QuadrilateralCropper({
         setShowZoomLens(false);
       }
     }
-    
+
     // Handle dragging
     if (dragIndex !== null) {
       const canvasRect = canvasRef.current.getBoundingClientRect();
       const offsetX = (canvasRect.width - imageDimensions.width) / 2;
       const offsetY = (canvasRect.height - imageDimensions.height) / 2;
-      
+
       const imageX = x - offsetX;
       const imageY = y - offsetY;
-      
+
       const relativeX = Math.max(0, Math.min(1, imageX / imageDimensions.width));
       const relativeY = Math.max(0, Math.min(1, imageY / imageDimensions.height));
-      
-      setCorners(prev => prev.map((corner, index) => 
+
+      setCorners(prev => prev.map((corner, index) =>
         index === dragIndex ? { x: relativeX, y: relativeY } : corner
       ));
-      
+
       const lensSize = 120;
       const offset = 24;
       const viewportWidth = window.innerWidth;
@@ -551,14 +551,14 @@ export default function QuadrilateralCropper({
   // Mouse down handler
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (!imageDimensions || !canvasRef.current || !containerRef.current) return;
-    
+
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    
+
     const cornerIndex = getCornerAtPosition(x, y);
-    
+
     if (cornerIndex >= 0) {
       setDragIndex(cornerIndex);
       setShowZoomLens(true);
@@ -586,7 +586,7 @@ export default function QuadrilateralCropper({
     console.log('🚀 Apply Crop button clicked!');
     console.log('📊 Current crop points:', corners);
     console.log('📐 Image dimensions:', imageDimensions);
-    
+
     if (!imageDimensions) {
       console.error('❌ No image dimensions available');
       return;
@@ -625,11 +625,11 @@ export default function QuadrilateralCropper({
         corners,
         imageDimensions
       );
-      
+
       if (croppedImage) {
         const link = document.createElement('a');
         link.href = croppedImage;
-        link.download = `cropped-image-${Date.now()}.jpg`;
+        link.download = `cropped-image-${Date.now()} - Thundocs.jpg`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -658,25 +658,25 @@ export default function QuadrilateralCropper({
       <div className="relative w-full h-full flex items-center justify-center overflow-hidden" ref={containerRef}>
         {/* Image Container */}
         <div className="relative w-full h-full flex items-center justify-center">
-        {/* Loading State */}
-        {!imageLoaded && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-900/50 rounded-lg backdrop-blur-sm">
-            <div className="flex flex-col items-center space-y-2">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400"></div>
-              <div className="text-gray-300 text-sm">Loading image...</div>
+          {/* Loading State */}
+          {!imageLoaded && (
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-900/50 rounded-lg backdrop-blur-sm">
+              <div className="flex flex-col items-center space-y-2">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400"></div>
+                <div className="text-gray-300 text-sm">Loading image...</div>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Processing State */}
-        {isProcessing && (
-          <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-30 rounded-lg backdrop-blur-sm">
-            <div className="flex flex-col items-center space-y-2">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400"></div>
-              <div className="text-white text-sm font-medium">Processing crop...</div>
+          {/* Processing State */}
+          {isProcessing && (
+            <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-30 rounded-lg backdrop-blur-sm">
+              <div className="flex flex-col items-center space-y-2">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400"></div>
+                <div className="text-white text-sm font-medium">Processing crop...</div>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
           {/* Image */}
           <img
@@ -703,19 +703,19 @@ export default function QuadrilateralCropper({
 
         {/* Zoom Lens */}
         {showZoomLens && (
-          <div 
+          <div
             className="fixed pointer-events-none z-40 shadow-2xl rounded-full overflow-hidden"
-            style={{ 
-              left: `${zoomLensPos.x}px`, 
+            style={{
+              left: `${zoomLensPos.x}px`,
               top: `${zoomLensPos.y}px`,
               transform: 'translate(-50%, -50%)'
             }}
           >
-            <canvas 
+            <canvas
               ref={zoomCanvasRef}
               className="block"
-              style={{ 
-                width: '120px', 
+              style={{
+                width: '120px',
                 height: '120px',
                 filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.4))'
               }}
@@ -750,7 +750,7 @@ export default function QuadrilateralCropper({
           <Crop className="h-4 w-4" />
           <span>{isProcessing ? 'Processing...' : 'Apply Crop'}</span>
         </Button>
-        
+
         <Button
           onClick={handleDownloadCrop}
           disabled={!imageLoaded || isProcessing}
@@ -760,7 +760,7 @@ export default function QuadrilateralCropper({
           <Download className="h-4 w-4" />
           <span>Download</span>
         </Button>
-        
+
         <Button
           onClick={handleReset}
           disabled={!imageLoaded || isProcessing}

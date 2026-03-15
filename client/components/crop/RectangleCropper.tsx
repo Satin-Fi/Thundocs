@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef } from 'react';
 import Cropper from 'react-easy-crop';
-import { Area, Point } from 'react-easy-crop/types';
+type Point = { x: number; y: number };
+type Area = { x: number; y: number; width: number; height: number };
 import { Button } from '@/components/ui/button';
 import { CropArea, AspectRatio } from './CropTool';
 

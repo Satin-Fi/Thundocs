@@ -450,133 +450,123 @@ export const FourPointCropper = forwardRef<FourPointCropperHandle, FourPointCrop
     return CropOptimizer.isApproximatelyRectangular(points, tolerance);
   }, []);
 
-  // Calculate perspective transformation matrix
-  const calculatePerspectiveTransform = useCallback((srcPoints: CropPoint[], dstWidth: number, dstHeight: number) => {
-    if (!validateCropPoints(srcPoints)) {
-      throw new Error('Invalid source points for perspective transformation');
-    }
+  // Calculate perspective transformation matrix (destination → source mapping)
+  const calculatePerspectiveTransform = useCallback(
+    (srcPoints: CropPoint[], dstWidth: number, dstHeight: number) => {
+      if (!validateCropPoints(srcPoints)) {
+        throw new Error("Invalid source points for perspective transformation");
+      }
 
-    // Use custom homography for all transformations (perspective-transform library disabled)
-    console.log('Using custom homography transformation for all crops');
-
-    // Use custom 8-point homography for complex shapes
-    console.log('Using custom homography transformation');
-    try {
-      const homographyMatrix = HomographyCalculator.calculateHomography(
-        srcPoints.map(p => [p.x, p.y]),
-        [
+      try {
+        // We want a homography that maps DEST (output rect) -> SRC (quadrilateral)
+        // so that in the shader we can iterate over destination pixels
+        // and look up their corresponding source coordinates.
+        const dstPoints = [
           [0, 0],
           [dstWidth, 0],
           [dstWidth, dstHeight],
-          [0, dstHeight]
-        ]
-      );
+          [0, dstHeight],
+        ];
 
-      if (homographyMatrix) {
-        return {
-          homography: {
-            a: homographyMatrix[0], b: homographyMatrix[1], c: homographyMatrix[2],
-            d: homographyMatrix[3], e: homographyMatrix[4], f: homographyMatrix[5],
-            g: homographyMatrix[6], h: homographyMatrix[7]
-          }
-        };
+        const srcArr = srcPoints.map((p) => [p.x, p.y]);
+
+        const homographyMatrix = HomographyCalculator.calculateHomography(
+          dstPoints,
+          srcArr
+        );
+
+        if (homographyMatrix) {
+          return {
+            homography: {
+              a: homographyMatrix[0],
+              b: homographyMatrix[1],
+              c: homographyMatrix[2],
+              d: homographyMatrix[3],
+              e: homographyMatrix[4],
+              f: homographyMatrix[5],
+              g: homographyMatrix[6],
+              h: homographyMatrix[7],
+            },
+          };
+        }
+      } catch (error) {
+        console.error("Perspective calculation failed:", error);
+        throw error;
       }
-    } catch (error) {
-      console.error('Perspective calculation failed:', error);
-      throw error;
-    }
-  }, [validateCropPoints, isApproximatelyRectangular]);
+    },
+    [validateCropPoints, isApproximatelyRectangular]
+  );
 
-  // Apply perspective transformation to canvas with optimized pixel processing
-  const applyPerspectiveTransform = useCallback((canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, transform: any): Promise<void> => {
-    return new Promise((resolve) => {
-      if (transform.homography) {
-        // Use custom homography transformation with performance optimizations
-        const h = transform.homography;
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const transformedData = ctx.createImageData(canvas.width, canvas.height);
+  // Apply perspective transformation from a source canvas to a destination canvas
+  const applyPerspectiveTransform = useCallback(
+    (
+      srcCanvas: HTMLCanvasElement,
+      srcCtx: CanvasRenderingContext2D,
+      dstCanvas: HTMLCanvasElement,
+      dstCtx: CanvasRenderingContext2D,
+      transform: any
+    ): Promise<void> => {
+      return new Promise((resolve) => {
+        if (transform.homography) {
+          const h = transform.homography;
 
-        // Pre-calculate constants for better performance
-        const width = canvas.width;
-        const height = canvas.height;
-        const srcData = imageData.data;
-        const dstData = transformedData.data;
+          const srcImage = srcCtx.getImageData(0, 0, srcCanvas.width, srcCanvas.height);
+          const srcData = srcImage.data;
 
-        // Use batch processing for better performance
-        const batchSize = Math.min(1000, height); // Process in batches to avoid blocking
-        let currentRow = 0;
+          const width = dstCanvas.width;
+          const height = dstCanvas.height;
+          const dstImage = dstCtx.createImageData(width, height);
+          const dstData = dstImage.data;
 
-        const processBatch = () => {
-          const endRow = Math.min(currentRow + batchSize, height);
+          const batchSize = Math.min(1000, height);
+          let currentRow = 0;
 
-          for (let y = currentRow; y < endRow; y++) {
-            for (let x = 0; x < width; x++) {
-              // Apply inverse homography transformation
-              const denominator = h.g * x + h.h * y + 1;
-              if (Math.abs(denominator) > 1e-10) {
-                const srcX = Math.round((h.a * x + h.b * y + h.c) / denominator);
-                const srcY = Math.round((h.d * x + h.e * y + h.f) / denominator);
+          const processBatch = () => {
+            const endRow = Math.min(currentRow + batchSize, height);
 
-                if (srcX >= 0 && srcX < width && srcY >= 0 && srcY < height) {
-                  const srcIndex = (srcY * width + srcX) * 4;
-                  const dstIndex = (y * width + x) * 4;
+            for (let y = currentRow; y < endRow; y++) {
+              for (let x = 0; x < width; x++) {
+                const denominator = h.g * x + h.h * y + 1;
+                if (Math.abs(denominator) > 1e-10) {
+                  const srcX = Math.round((h.a * x + h.b * y + h.c) / denominator);
+                  const srcY = Math.round((h.d * x + h.e * y + h.f) / denominator);
 
-                  // Copy RGBA values efficiently
-                  dstData[dstIndex] = srcData[srcIndex];
-                  dstData[dstIndex + 1] = srcData[srcIndex + 1];
-                  dstData[dstIndex + 2] = srcData[srcIndex + 2];
-                  dstData[dstIndex + 3] = srcData[srcIndex + 3];
+                  if (
+                    srcX >= 0 &&
+                    srcX < srcCanvas.width &&
+                    srcY >= 0 &&
+                    srcY < srcCanvas.height
+                  ) {
+                    const srcIndex = (srcY * srcCanvas.width + srcX) * 4;
+                    const dstIndex = (y * width + x) * 4;
+
+                    dstData[dstIndex] = srcData[srcIndex];
+                    dstData[dstIndex + 1] = srcData[srcIndex + 1];
+                    dstData[dstIndex + 2] = srcData[srcIndex + 2];
+                    dstData[dstIndex + 3] = srcData[srcIndex + 3];
+                  }
                 }
               }
             }
-          }
 
-          currentRow = endRow;
+            currentRow = endRow;
 
-          // Continue processing or finish
-          if (currentRow < height) {
-            // Use requestAnimationFrame for non-blocking processing
-            requestAnimationFrame(processBatch);
-          } else {
-            // Processing complete, update canvas
-            ctx.putImageData(transformedData, 0, 0);
-            resolve();
-          }
-        };
+            if (currentRow < height) {
+              requestAnimationFrame(processBatch);
+            } else {
+              dstCtx.putImageData(dstImage, 0, 0);
+              resolve();
+            }
+          };
 
-        // Start batch processing
-        processBatch();
-      } else {
-        resolve();
-      }
-    });
-  }, []);
-
-  // Calculate optimal scaling to fit cropped content within original canvas dimensions
-  const calculateOptimalScaling = useCallback((cropWidth: number, cropHeight: number, originalWidth: number, originalHeight: number) => {
-    // Calculate scale factors to fit within original dimensions while preserving aspect ratio
-    const scaleX = originalWidth / cropWidth;
-    const scaleY = originalHeight / cropHeight;
-
-    // Use the smaller scale factor to ensure the entire cropped image fits (zoom-out effect)
-    const optimalScale = Math.min(scaleX, scaleY);
-
-    // Calculate final dimensions maintaining aspect ratio
-    const finalWidth = Math.round(cropWidth * optimalScale);
-    const finalHeight = Math.round(cropHeight * optimalScale);
-
-    // Calculate centering offsets
-    const offsetX = Math.round((originalWidth - finalWidth) / 2);
-    const offsetY = Math.round((originalHeight - finalHeight) / 2);
-
-    return {
-      scale: optimalScale,
-      finalWidth,
-      finalHeight,
-      offsetX,
-      offsetY
-    };
-  }, []);
+          processBatch();
+        } else {
+          resolve();
+        }
+      });
+    },
+    []
+  );
 
   // Optimized four-point crop with custom perspective correction and auto-scaling
   const applyCrop = useCallback(async () => {
@@ -594,16 +584,16 @@ export const FourPointCropper = forwardRef<FourPointCropperHandle, FourPointCrop
       return;
     }
 
-    // Calculate crop coordinates relative to original image
+    // Calculate crop coordinates relative to original image pixels
     const scaleX = imageElement.naturalWidth / imageBounds.width;
     const scaleY = imageElement.naturalHeight / imageBounds.height;
 
-    const scaledPoints = cropPoints.map(point => ({
+    const scaledPoints = cropPoints.map((point) => ({
       x: (point.x - imageBounds.x) * scaleX,
-      y: (point.y - imageBounds.y) * scaleY
+      y: (point.y - imageBounds.y) * scaleY,
     }));
 
-    // Calculate output dimensions
+    // Calculate output dimensions (width/height of rectified crop)
     const distances = [
       Math.hypot(scaledPoints[1].x - scaledPoints[0].x, scaledPoints[1].y - scaledPoints[0].y), // top
       Math.hypot(scaledPoints[2].x - scaledPoints[3].x, scaledPoints[2].y - scaledPoints[3].y), // bottom
@@ -613,11 +603,6 @@ export const FourPointCropper = forwardRef<FourPointCropperHandle, FourPointCrop
 
     const cropWidth = Math.max(distances[0], distances[1]);
     const cropHeight = Math.max(distances[2], distances[3]);
-
-    // Calculate optimal scaling for zoom-out effect
-    const originalWidth = imageElement.naturalWidth;
-    const originalHeight = imageElement.naturalHeight;
-    const scaling = calculateOptimalScaling(cropWidth, cropHeight, originalWidth, originalHeight);
 
     try {
       // Validate crop points
@@ -636,44 +621,35 @@ export const FourPointCropper = forwardRef<FourPointCropperHandle, FourPointCrop
         throw new Error('Crop area too small');
       }
 
-      // Calculate perspective transformation
-      const transform = calculatePerspectiveTransform(scaledPoints, cropWidth, cropHeight);
+      // Source canvas: original image
+      const srcCanvas = document.createElement("canvas");
+      const srcCtx = srcCanvas.getContext("2d");
+      if (!srcCtx) return;
 
-      // Create canvas for the cropped image with original dimensions for zoom-out effect
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
+      srcCanvas.width = imageElement.naturalWidth;
+      srcCanvas.height = imageElement.naturalHeight;
+      srcCtx.drawImage(imageElement, 0, 0);
 
-      // Set canvas to original image dimensions to maintain the zoom-out effect
-      canvas.width = originalWidth;
-      canvas.height = originalHeight;
+      // Destination canvas: rectified crop
+      const dstCanvas = document.createElement("canvas");
+      const dstCtx = dstCanvas.getContext("2d");
+      if (!dstCtx) return;
 
-      // Fill with transparent background
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      dstCanvas.width = Math.max(1, Math.round(cropWidth));
+      dstCanvas.height = Math.max(1, Math.round(cropHeight));
 
-      // Create temporary canvas for perspective transformation
-      const tempCanvas = document.createElement('canvas');
-      const tempCtx = tempCanvas.getContext('2d');
-      if (!tempCtx) return;
-
-      tempCanvas.width = Math.round(cropWidth);
-      tempCanvas.height = Math.round(cropHeight);
-
-      // Draw the original image on temp canvas
-      tempCtx.drawImage(imageElement, 0, 0);
-
-      // Apply perspective transformation to temporary canvas
-      await applyPerspectiveTransform(tempCanvas, tempCtx, transform);
-
-      // Draw the transformed image onto the main canvas with scaling and centering
-      ctx.drawImage(
-        tempCanvas,
-        0, 0, tempCanvas.width, tempCanvas.height,
-        scaling.offsetX, scaling.offsetY, scaling.finalWidth, scaling.finalHeight
+      // Calculate perspective transformation from destination rect -> source quad
+      const transform = calculatePerspectiveTransform(
+        scaledPoints,
+        dstCanvas.width,
+        dstCanvas.height
       );
 
+      // Apply perspective transformation
+      await applyPerspectiveTransform(srcCanvas, srcCtx, dstCanvas, dstCtx, transform);
+
       // Convert to blob and call onCrop
-      canvas.toBlob((blob) => {
+      dstCanvas.toBlob((blob) => {
         if (blob) {
           const url = URL.createObjectURL(blob);
           console.log('✅ Calling onCrop with cropped image URL:', url);

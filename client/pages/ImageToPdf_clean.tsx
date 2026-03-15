@@ -1,7 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
-import { motion, AnimatePresence, PanInfo } from "framer-motion";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -10,66 +9,26 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
-import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
 import {
   Upload,
-  FileImage,
-  RotateCw,
-  Crop,
-  Filter,
   Download,
-  Settings,
-  Move,
-  Trash2,
-  ZoomIn,
-  ZoomOut,
-  RotateCcw,
-  Maximize,
   Plus,
-  Minus,
-  Undo,
-  Redo,
-  RotateCcw as Reset,
-  Palette,
-  Sun,
-  Contrast as ContrastIcon,
-  Droplets,
   Grid,
-  Type,
-  Image as ImageIcon,
-  Layers,
-  Circle,
-  Square,
-  Triangle,
-  Save,
-  Wand2,
-  Sparkles,
-  FlipHorizontal,
-  FlipVertical,
-  Sliders,
-  Brush,
-  Scissors,
-  Eraser,
-  Aperture,
-  Lightbulb,
-  Paintbrush,
-  CircleDashed,
-  RefreshCw,
-  GripVertical,
-  Eye,
-  EyeOff,
+  Layout,
+  FileText,
+  Move,
+  Monitor,
+  RotateCw,
+  ChevronDown,
 } from "lucide-react";
+import { UploadingRing } from "@/components/UploadingRing";
 import { useDropzone } from "react-dropzone";
 import ImageReorderGrid from "./ImageReorderGrid";
 import ImageEditor from "@/components/ImageEditor";
+import ToolNavbar from "@/components/ToolNavbar";
+import { getImageFilter } from "@/utils/imageUtils";
+import SplitDownloadCard from "@/components/SplitDownloadCard";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ImageFile {
   id: string;
@@ -77,6 +36,8 @@ interface ImageFile {
   preview: string;
   name: string;
   size: number;
+  width: number;
+  height: number;
   rotation: number;
   flipHorizontal?: boolean;
   flipVertical?: boolean;
@@ -84,15 +45,22 @@ interface ImageFile {
     brightness: number;
     contrast: number;
     saturation: number;
+    exposure: number;
+    highlights: number;
+    shadows: number;
     blur: number;
     sepia: number;
+    warmth: number;
+    tint: number;
+    vignette: number;
     grayscale: number;
     hueRotate: number;
     invert: number;
-    sharpen?: number;
+    sharpness: number;
     gamma?: number;
     vibrance?: number;
   };
+  activeFilter?: string;
   effects?: {
     vignette?: number;
     noise?: number;
@@ -117,40 +85,32 @@ interface ImageFile {
   };
 }
 
-interface ImageHistory {
-  rotation: number;
-  flipHorizontal?: boolean;
-  flipVertical?: boolean;
-  filters: ImageFile["filters"];
-  effects?: ImageFile["effects"];
-  crop?: ImageFile["crop"];
-  watermark?: ImageFile["watermark"];
-}
+
 
 interface PageSettings {
   orientation: "portrait" | "landscape";
-  size: "A4" | "A3" | "A5" | "Letter" | "Legal" | "Custom";
+  size: "A4" | "Legal" | "Letter" | "Fit";
   margin: number;
-  customWidth?: number;
-  customHeight?: number;
 }
 
-interface CollageSettings {
-  layout: '1x2' | '2x1' | '2x2' | '3x2' | '3x3' | '4x4';
-  spacing: number;
-  background: string;
-}
+
 
 const defaultFilters: ImageFile["filters"] = {
-  brightness: 100,
-  contrast: 100,
-  saturation: 100,
+  brightness: 0,
+  contrast: 0,
+  saturation: 0,
+  exposure: 0,
+  highlights: 0,
+  shadows: 0,
+  sharpness: 0,
   blur: 0,
-  sepia: 0,
+  warmth: 0,
+  tint: 0,
+  vignette: 0,
   grayscale: 0,
-  hueRotate: 0,
   invert: 0,
-  sharpen: 0,
+  sepia: 0,
+  hueRotate: 0,
   gamma: 1,
   vibrance: 0,
 };
@@ -164,49 +124,81 @@ const defaultEffects: Required<ImageFile>["effects"] = {
   dramatic: false,
 };
 
-const defaultWatermark = {
-  text: 'Watermark',
-  opacity: 0.3,
-  fontSize: 40,
-  color: '#000000',
-  position: 'center' as const,
-};
 
-const defaultCrop = {
-  x: 0,
-  y: 0,
-  width: 100,
-  height: 100,
-};
 
-const defaultCollageSettings = {
-  layout: '2x2' as const,
-  spacing: 10,
-  background: '#ffffff',
-};
 
 export default function ImageToPdfPage() {
   const [images, setImages] = useState<ImageFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>('filters');
+  const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
+  const [interactionMessage, setInteractionMessage] = useState<string | null>(null);
+  const interactionTimerRef = useRef<number | null>(null);
+  const [isSorting, setIsSorting] = useState(false);
+
   const [pageSettings, setPageSettings] = useState<PageSettings>({
     orientation: "portrait",
     size: "A4",
     margin: 20,
   });
-  const [collageSettings, setCollageSettings] = useState<CollageSettings>(defaultCollageSettings);
-  const [outputFormat, setOutputFormat] = useState<'pdf' | 'collage' | 'watermark'>('pdf');
-  const [globalWatermark, setGlobalWatermark] = useState(defaultWatermark);
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-  const [hoveredTileIndex, setHoveredTileIndex] = useState<number | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dropIndex, setDropIndex] = useState<number | null>(null);
-  const [imageHistory, setImageHistory] = useState<
-    Record<string, ImageHistory[]>
-  >({});
-  const [historyIndex, setHistoryIndex] = useState<Record<string, number>>({});
+  const [thumbnailSize, setThumbnailSize] = useState<"small" | "medium" | "large">("small");
+  const [conversionError, setConversionError] = useState<string | null>(null);
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [downloadName, setDownloadName] = useState<string | null>(null);
+  const [downloadSizeLabel, setDownloadSizeLabel] = useState<string | null>(null);
+  const isMobile = useIsMobile();
+  const [showPageSettingsMobile, setShowPageSettingsMobile] = useState(false);
+
+  const normalizePageSize = (size: PageSettings["size"]) => {
+    if (size === "A4" || size === "Legal" || size === "Letter" || size === "Fit") return size;
+    return "A4";
+  };
+
+  const getPdfFormat = (size: PageSettings["size"]) => {
+    const normalized = normalizePageSize(size);
+    return normalized.toLowerCase() as "a4" | "legal" | "letter" | "fit";
+  };
+
+  const loadImageElement = (src: string) =>
+    new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("Failed to load image"));
+      img.src = src;
+    });
+
+  const renderImageForPdf = async (img: ImageFile) => {
+    const imageEl = await loadImageElement(img.preview);
+    const rotation = ((img.rotation ?? 0) % 360 + 360) % 360;
+    const radians = (rotation * Math.PI) / 180;
+    const cos = Math.abs(Math.cos(radians));
+    const sin = Math.abs(Math.sin(radians));
+    const width = imageEl.naturalWidth || imageEl.width;
+    const height = imageEl.naturalHeight || imageEl.height;
+    const canvasWidth = Math.ceil(width * cos + height * sin);
+    const canvasHeight = Math.ceil(width * sin + height * cos);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas context unavailable");
+
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+    const filter = getImageFilter({ filters: img.filters, activeFilter: img.activeFilter }, false).replace(/\s*url\([^)]+\)/g, "");
+    ctx.filter = filter;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+
+    ctx.translate(canvasWidth / 2, canvasHeight / 2);
+    ctx.rotate(radians);
+    ctx.scale(img.flipHorizontal ? -1 : 1, img.flipVertical ? -1 : 1);
+    ctx.drawImage(imageEl, -width / 2, -height / 2, width, height);
+
+    return canvas.toDataURL("image/jpeg", 0.92);
+  };
+
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [inlineEditorOpen, setInlineEditorOpen] = useState(false);
@@ -215,16 +207,16 @@ export default function ImageToPdfPage() {
   // Optimized batch reordering function for drag operations
   const reorderImages = useCallback((fromIndex: number, toIndex: number) => {
     if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0) return;
-    
+
     setImages((prev) => {
       if (fromIndex >= prev.length || toIndex > prev.length) return prev;
-      
+
       const newImages = [...prev];
       const [movedItem] = newImages.splice(fromIndex, 1);
-      
+
       // Insert at the target position
       newImages.splice(toIndex, 0, movedItem);
-      
+
       return newImages;
     });
   }, []);
@@ -232,12 +224,22 @@ export default function ImageToPdfPage() {
   // Enhanced keyboard navigation for Image Hopper functionality
   const [focusedImageIndex, setFocusedImageIndex] = useState<number | null>(null);
   const [isKeyboardMode, setIsKeyboardMode] = useState(false);
-  
+
   // Define removeImage function before useEffect that uses it
   const removeImage = useCallback((imageId: string) => {
+    const removed = images.find((img) => img.id === imageId);
+    if (removed) {
+      if (interactionTimerRef.current) {
+        window.clearTimeout(interactionTimerRef.current);
+      }
+      setInteractionMessage(`Removed "${removed.name}"`);
+      interactionTimerRef.current = window.setTimeout(() => {
+        setInteractionMessage(null);
+      }, 1500);
+    }
     setImages((prev) => prev.filter((img) => img.id !== imageId));
-  }, []);
-  
+  }, [images]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Check if we're in an input field or dialog
@@ -245,7 +247,7 @@ export default function ImageToPdfPage() {
       if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || activeElement.closest('[role="dialog"]'))) {
         return;
       }
-      
+
       // Image Hopper keyboard navigation
       switch (e.key) {
         case 'ArrowLeft':
@@ -264,7 +266,7 @@ export default function ImageToPdfPage() {
             }
           }
           break;
-          
+
         case 'ArrowRight':
           e.preventDefault();
           setIsKeyboardMode(true);
@@ -281,7 +283,7 @@ export default function ImageToPdfPage() {
             }
           }
           break;
-          
+
         case 'ArrowUp':
           e.preventDefault();
           setIsKeyboardMode(true);
@@ -293,10 +295,8 @@ export default function ImageToPdfPage() {
             setFocusedImageIndex(newIndex);
           }
           break;
-          
+
         case 'ArrowDown':
-          e.preventDefault();
-          setIsKeyboardMode(true);
           if (focusedImageIndex === null) {
             setFocusedImageIndex(0);
           } else {
@@ -305,16 +305,16 @@ export default function ImageToPdfPage() {
             setFocusedImageIndex(newIndex);
           }
           break;
-          
+
         case 'Enter':
         case ' ':
           e.preventDefault();
           if (focusedImageIndex !== null && images[focusedImageIndex]) {
-            setSelectedImage(images[focusedImageIndex].id);
-            setShowAdvanced(true);
+            setEditingImageId(images[focusedImageIndex].id);
+            setInlineEditorOpen(true);
           }
           break;
-          
+
         case 'Delete':
         case 'Backspace':
           e.preventDefault();
@@ -326,83 +326,84 @@ export default function ImageToPdfPage() {
             }
           }
           break;
-          
+
         case 'Home':
           e.preventDefault();
           setIsKeyboardMode(true);
           setFocusedImageIndex(0);
           break;
-          
+
         case 'End':
           e.preventDefault();
           setIsKeyboardMode(true);
           setFocusedImageIndex(images.length - 1);
           break;
-          
+
         case 'Escape':
           setFocusedImageIndex(null);
           setIsKeyboardMode(false);
           break;
       }
     };
-    
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [focusedImageIndex, images, reorderImages, removeImage]);
-  
+
   // Reset focus when images change
   useEffect(() => {
     if (focusedImageIndex !== null && focusedImageIndex >= images.length) {
       setFocusedImageIndex(images.length > 0 ? images.length - 1 : null);
     }
   }, [images.length, focusedImageIndex]);
-  
+
   // Mouse interaction resets keyboard mode
   const handleMouseInteraction = useCallback(() => {
     setIsKeyboardMode(false);
     setFocusedImageIndex(null);
   }, []);
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
     setIsUploading(true);
 
-    // Process files immediately without artificial delay
-    const newImages: ImageFile[] = acceptedFiles.map((file) => {
+    const newImages: ImageFile[] = await Promise.all(acceptedFiles.map(async (file) => {
       const id = Math.random().toString(36).substring(7);
-      const initialState = {
-        rotation: 0,
-        flipHorizontal: false,
-        flipVertical: false,
-        filters: { ...defaultFilters },
-        effects: { ...defaultEffects },
-      };
-
-      // Initialize history for each new image
-      setImageHistory((prev) => ({
-        ...prev,
-        [id]: [initialState],
-      }));
-      setHistoryIndex((prev) => ({
-        ...prev,
-        [id]: 0,
-      }));
+      const preview = URL.createObjectURL(file);
+      let width = 0;
+      let height = 0;
+      try {
+        const imgEl = await loadImageElement(preview);
+        width = imgEl.naturalWidth || imgEl.width;
+        height = imgEl.naturalHeight || imgEl.height;
+      } catch {
+      }
 
       return {
         id,
         file,
-        preview: URL.createObjectURL(file),
+        preview,
         name: file.name,
         size: file.size,
+        width,
+        height,
         rotation: 0,
         flipHorizontal: false,
         flipVertical: false,
         filters: { ...defaultFilters },
         effects: { ...defaultEffects },
       };
-    });
+    }));
 
     setImages((prev) => [...prev, ...newImages]);
     setIsUploading(false);
+  }, [loadImageElement]);
+
+  useEffect(() => {
+    return () => {
+      if (interactionTimerRef.current) {
+        window.clearTimeout(interactionTimerRef.current);
+      }
+    };
   }, []);
 
   // Debug function to get current image order (similar to reference document)
@@ -417,166 +418,76 @@ export default function ImageToPdfPage() {
     return order;
   }, [images]);
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     onDrop,
     accept: {
       "image/*": [".jpeg", ".jpg", ".png", ".gif", ".bmp", ".webp"],
     },
     multiple: true,
+    noClick: true,
+    noKeyboard: true,
+    disabled: isSorting,
   });
 
   const handleImageDoubleClick = (imageId: string) => {
-    console.log('Edit button clicked for image:', imageId);
-    console.log('Setting editingImageId to:', imageId);
     setEditingImageId(imageId);
     setInlineEditorOpen(true);
-    console.log('Inline editor should now be open');
-  };
-
-  const saveToHistory = (imageId: string, customImage?: ImageFile) => {
-    const image = customImage || images.find((img) => img.id === imageId);
-    if (!image) return;
-    
-    const currentHistory = imageHistory[imageId] || [];
-    const currentIndex = historyIndex[imageId] || 0;
-
-    // Remove any future history if we're not at the end
-    const newHistory = currentHistory.slice(0, currentIndex + 1);
-
-    // Add new state
-    const newState: ImageHistory = {
-      rotation: image.rotation,
-      flipHorizontal: image.flipHorizontal,
-      flipVertical: image.flipVertical,
-      filters: { ...image.filters },
-      effects: image.effects ? { ...image.effects } : undefined,
-      crop: image.crop ? { ...image.crop } : undefined,
-      watermark: image.watermark ? { ...image.watermark } : undefined,
-    };
-
-    newHistory.push(newState);
-
-    // Limit history size to 20 states
-    if (newHistory.length > 20) {
-      newHistory.shift();
-    }
-
-    setImageHistory((prev) => ({
-      ...prev,
-      [imageId]: newHistory,
-    }));
-
-    setHistoryIndex((prev) => ({
-      ...prev,
-      [imageId]: newHistory.length - 1,
-    }));
-  };
-
-  const undo = (imageId: string) => {
-    const currentIndex = historyIndex[imageId] || 0;
-    if (currentIndex > 0) {
-      const newIndex = currentIndex - 1;
-      const history = imageHistory[imageId];
-      const state = history[newIndex];
-
-      setImages((prev) =>
-        prev.map((img) =>
-          img.id === imageId
-            ? {
-                ...img,
-                rotation: state.rotation,
-                flipHorizontal: state.flipHorizontal,
-                flipVertical: state.flipVertical,
-                filters: { ...state.filters },
-                effects: state.effects ? { ...state.effects } : undefined,
-                crop: state.crop ? { ...state.crop } : undefined,
-                watermark: state.watermark ? { ...state.watermark } : undefined,
-              }
-            : img,
-        ),
-      );
-
-      setHistoryIndex((prev) => ({
-        ...prev,
-        [imageId]: newIndex,
-      }));
+    const img = images.find((item) => item.id === imageId);
+    if (img) {
+      if (interactionTimerRef.current) {
+        window.clearTimeout(interactionTimerRef.current);
+      }
+      setInteractionMessage(`Editing "${img.name}"`);
+      interactionTimerRef.current = window.setTimeout(() => {
+        setInteractionMessage(null);
+      }, 1500);
     }
   };
 
-  const redo = (imageId: string) => {
-    const currentIndex = historyIndex[imageId] || 0;
-    const history = imageHistory[imageId] || [];
 
-    if (currentIndex < history.length - 1) {
-      const newIndex = currentIndex + 1;
-      const state = history[newIndex];
-
-      setImages((prev) =>
-        prev.map((img) =>
-          img.id === imageId
-            ? {
-                ...img,
-                rotation: state.rotation,
-                flipHorizontal: state.flipHorizontal,
-                flipVertical: state.flipVertical,
-                filters: { ...state.filters },
-                effects: state.effects ? { ...state.effects } : undefined,
-                crop: state.crop ? { ...state.crop } : undefined,
-                watermark: state.watermark ? { ...state.watermark } : undefined,
-              }
-            : img,
-        ),
-      );
-
-      setHistoryIndex((prev) => ({
-        ...prev,
-        [imageId]: newIndex,
-      }));
-    }
-  };
-
-  const resetToDefault = (imageId: string) => {
-    const resetState = {
-      rotation: 0,
-      flipHorizontal: false,
-      flipVertical: false,
-      filters: { ...defaultFilters },
-      effects: { ...defaultEffects },
-      crop: undefined,
-      watermark: undefined
-    };
-
-    setImages((prev) =>
-      prev.map((img) =>
-        img.id === imageId
-          ? {
-              ...img,
-              rotation: resetState.rotation,
-              flipHorizontal: resetState.flipHorizontal,
-              flipVertical: resetState.flipVertical,
-              filters: { ...resetState.filters },
-              effects: { ...resetState.effects },
-              crop: resetState.crop,
-              watermark: resetState.watermark
-            }
-          : img,
-      ),
-    );
-
-    // Save to history
-    const image = images.find((img) => img.id === imageId);
-    if (image) {
-      saveToHistory(imageId, { ...image, ...resetState });
-    }
-  };
 
   const handleInlineEditorSave = (updatedImage: ImageFile) => {
-    saveToHistory(updatedImage.id, updatedImage);
-    setImages(prev => prev.map(img => 
+    setImages(prev => prev.map(img =>
       img.id === updatedImage.id ? updatedImage : img
     ));
+  };
+
+  const handleApplyToAll = (sourceImage: ImageFile) => {
+    setImages(prev => prev.map(img =>
+      img.id === sourceImage.id
+        ? sourceImage
+        : {
+          ...img,
+          filters: { ...sourceImage.filters },
+          activeFilter: sourceImage.activeFilter
+        }
+    ));
+  };
+
+  const handleResetAll = () => {
+    setImages(prev => prev.map(img => ({
+      ...img,
+      filters: { ...defaultFilters },
+      activeFilter: undefined
+    })));
+  };
+
+  const handleClearAllImages = () => {
+    setImages([]);
+    setSelectedImageId(null);
+    setDownloadUrl(null);
+    setDownloadName(null);
+    setDownloadSizeLabel(null);
+    setConversionError(null);
     setInlineEditorOpen(false);
     setEditingImageId(null);
+  };
+
+  const handleRotateAll = () => {
+    setImages(prev => prev.map(img => ({
+      ...img,
+      rotation: img.rotation + 90
+    })));
   };
 
   const handleInlineEditorCancel = () => {
@@ -584,384 +495,240 @@ export default function ImageToPdfPage() {
     setEditingImageId(null);
   };
 
-  const updateImageFilter = (
-    imageId: string,
-    filterType: keyof ImageFile["filters"],
-    value: number,
-  ) => {
-    setImages((prev) =>
-      prev.map((img) => {
-        if (img.id === imageId) {
-          const updatedImage = {
-            ...img,
-            filters: { ...img.filters, [filterType]: value },
-          };
-          // Save to history after a delay to avoid too many history states
-          setTimeout(() => saveToHistory(imageId, updatedImage), 300);
-          return updatedImage;
-        }
-        return img;
-      }),
-    );
-  };
-
-  const rotateImage = (imageId: string, direction: "cw" | "ccw") => {
-    setImages((prev) =>
-      prev.map((img) => {
-        if (img.id === imageId) {
-          const updatedImage = {
-            ...img,
-            rotation: img.rotation + (direction === "cw" ? 90 : -90),
-          };
-          saveToHistory(imageId, updatedImage);
-          return updatedImage;
-        }
-        return img;
-      }),
-    );
-  };
-
-  // removeImage function moved above to fix initialization order
-
-  const moveImage = (imageId: string, direction: 'up' | 'down') => {
-    setImages((prev) => {
-      const currentIndex = prev.findIndex(img => img.id === imageId);
-      if (currentIndex === -1) return prev;
-      
-      const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-      if (newIndex < 0 || newIndex >= prev.length) return prev;
-      
-      const newImages = [...prev];
-      [newImages[currentIndex], newImages[newIndex]] = [newImages[newIndex], newImages[currentIndex]];
-      return newImages;
-    });
-  };
-
-  const flipImage = (imageId: string, direction: 'horizontal' | 'vertical') => {
-    setImages((prev) =>
-      prev.map((img) => {
-        if (img.id === imageId) {
-          const updatedImage = {
-            ...img,
-            [direction === 'horizontal' ? 'flipHorizontal' : 'flipVertical']: 
-              !img[direction === 'horizontal' ? 'flipHorizontal' : 'flipVertical'],
-          };
-          saveToHistory(imageId, updatedImage);
-          return updatedImage;
-        }
-        return img;
-      }),
-    );
-  };
-
-  const updateImageEffect = (
-    imageId: string,
-    effectType: keyof Required<ImageFile>['effects'],
-    value: number | boolean | string,
-  ) => {
-    setImages((prev) =>
-      prev.map((img) => {
-        if (img.id === imageId) {
-          const updatedImage = {
-            ...img,
-            effects: { ...img.effects, [effectType]: value },
-          };
-          setTimeout(() => saveToHistory(imageId, updatedImage), 300);
-          return updatedImage;
-        }
-        return img;
-      }),
-    );
-  };
-
-  const getImageStyle = (image: ImageFile) => {
-    const cropStyle = image.crop ? {
-      clipPath: `inset(${image.crop.y}% ${100 - (image.crop.x + image.crop.width)}% ${100 - (image.crop.y + image.crop.height)}% ${image.crop.x}%)`,
-    } : {};
-    
-    // Build transform string with rotation and flips
-    let transformString = `rotate(${image.rotation}deg)`;
-    if (image.flipHorizontal) transformString = `scaleX(-1) ${transformString}`;
-    if (image.flipVertical) transformString = `scaleY(-1) ${transformString}`;
-    
-    // Build filter string with all filters
-    let filterString = `brightness(${image.filters.brightness}%) contrast(${image.filters.contrast}%) saturate(${image.filters.saturation}%) blur(${image.filters.blur}px) sepia(${image.filters.sepia}%) grayscale(${image.filters.grayscale}%) hue-rotate(${image.filters.hueRotate}deg) invert(${image.filters.invert}%)`;
-    
-    // Add sharpen, gamma and vibrance if they exist
-    if (image.filters.sharpen) filterString += ` contrast(${100 + image.filters.sharpen}%) brightness(${100 + image.filters.sharpen/2}%)`;
-    if (image.filters.gamma) filterString += ` brightness(${image.filters.gamma * 100}%)`;
-    if (image.filters.vibrance) filterString += ` saturate(${100 + image.filters.vibrance}%)`;
-    
-    // Add effects styles
-    const effectsStyle: Record<string, string> = {};
-    if (image.effects) {
-      // Vignette effect using box-shadow
-      if (image.effects.vignette > 0) {
-        effectsStyle.boxShadow = `inset 0 0 ${50 + image.effects.vignette * 2}px rgba(0,0,0,${image.effects.vignette / 100})`;
-      }
+  const formatSizeLabel = (bytes: number): string => {
+    if (bytes >= 1024 * 1024) {
+      const mb = bytes / (1024 * 1024);
+      return `${mb.toFixed(2)} MB`;
     }
-    
-    return {
-      transform: transformString,
-      filter: filterString,
-      ...cropStyle,
-      ...effectsStyle,
-    };
+    const kb = Math.max(bytes / 1024, 1);
+    return `${kb.toFixed(1)} KB`;
   };
+
+
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
-      {/* Header */}
-      <header className="border-b border-gray-800/50 bg-gradient-to-r from-gray-900/95 via-gray-800/95 to-gray-900/95 backdrop-blur-md sticky top-0 z-50 shadow-xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-5">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-            <div className="flex items-center space-x-3 sm:space-x-6">
-              <div className="flex items-center space-x-2 sm:space-x-3">
-                <div className="p-1.5 sm:p-2 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg sm:rounded-xl shadow-lg">
-                  <FileImage className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">Image to PDF</h1>
-                  <p className="text-xs text-gray-400 mt-0.5 hidden sm:block">Convert & enhance your images</p>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center justify-between sm:justify-end space-x-3 sm:space-x-4">
-              <div className="flex items-center space-x-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-gray-800/60 rounded-full border border-gray-700/50">
-                <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></div>
-                <span className="text-xs sm:text-sm text-gray-300 font-medium">
-                  {images.length} {images.length === 1 ? 'image' : 'images'}
-                </span>
-              </div>
-              <Button
-                className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-xs sm:text-sm px-3 sm:px-4 py-2 sm:py-2.5"
-                disabled={images.length === 0 || isProcessing}
-                onClick={async () => {
-                setIsProcessing(true);
-                const formData = new FormData();
-    
-                // Add page settings to the request
-                formData.append("orientation", pageSettings.orientation);
-                formData.append("size", pageSettings.size);
-                formData.append("margin", pageSettings.margin.toString());
-                
-                if (pageSettings.size === "Custom" && pageSettings.customWidth && pageSettings.customHeight) {
-                  formData.append("customWidth", pageSettings.customWidth.toString());
-                  formData.append("customHeight", pageSettings.customHeight.toString());
-                }
-                
-                // Add images to the request
-                images.forEach((img, index) => {
-                  formData.append("images", img.file);
-                  
-                  // Add image processing metadata
-                  const imageMetadata = {
-                    id: img.id,
-                    index,
-                    rotation: img.rotation,
-                    flipHorizontal: img.flipHorizontal || false,
-                    flipVertical: img.flipVertical || false,
-                    filters: img.filters,
-                    effects: img.effects || defaultEffects,
-                    crop: img.crop,
-                    watermark: img.watermark
-                  };
-                  
-                  formData.append(`imageMetadata_${index}`, JSON.stringify(imageMetadata));
-                });
-                
-                // Add total image count
-                formData.append("imageCount", images.length.toString());
-                
-                try {
-                  const res = await fetch(`http://localhost:3000/jpg-to-pdf`, {
-                    method: "POST",
-                    body: formData,
-                  });
-            
-                  if (!res.ok) throw new Error(`Failed to process images: ${await res.text()}`);
-            
-                  const blob = await res.blob();
-                  const url = window.URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = "converted.pdf";
-                  a.click();
-                  window.URL.revokeObjectURL(url);
-                } catch (err) {
-                  alert("Processing failed: " + (err instanceof Error ? err.message : String(err)));
-                  console.error(err);
-                } finally {
-                  setIsProcessing(false);
-                }
-              }}
-              >
-                <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">{isProcessing ? "Processing..." : "Convert to PDF"}</span>
-                <span className="sm:hidden">{isProcessing ? "Processing" : "Convert"}</span>
-              </Button>
-            </div>
+    <div className="min-h-screen relative overflow-hidden compress-bg text-white font-sans selection:bg-cyan-500/30">
+      <ToolNavbar />
+
+      <div className="relative z-10 container mx-auto px-4 py-8 md:py-16 flex flex-col items-center min-h-[90vh]">
+        <div className="w-full max-w-6xl space-y-6">
+          <div className="text-center space-y-3">
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight bg-gradient-to-b from-white to-white/70 bg-clip-text text-transparent">
+              Image to PDF
+            </h1>
+            <p className="text-lg text-blue-100/60 max-w-lg mx-auto">
+              Convert images into a clean, shareable PDF in seconds.
+            </p>
           </div>
-        </div>
-      </header>
+          <input {...getInputProps()} className="sr-only" />
 
-      <div className="max-w-7xl mx-auto p-2 sm:p-4 grid grid-cols-1 lg:grid-cols-4 gap-3 sm:gap-6">
-        {/* Settings Panel */}
-        <div className="lg:col-span-1 space-y-6">
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <Card className="bg-gradient-to-br from-gray-800/90 via-gray-800/70 to-gray-900/90 border border-gray-700/40 backdrop-blur-lg shadow-2xl hover:shadow-cyan-500/15 transition-all duration-300 relative overflow-hidden">
-              {/* Animated background decoration */}
-              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-blue-500/5 opacity-0 hover:opacity-100 transition-opacity duration-500"></div>
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-cyan-400/10 to-transparent rounded-full blur-xl"></div>
-              
-              <CardHeader className="pb-6 relative z-10">
-                <CardTitle className="text-white flex items-center text-lg group">
-                  <motion.div 
-                    className="p-3 bg-gradient-to-br from-cyan-500/30 via-blue-400/20 to-purple-500/30 rounded-xl mr-4 shadow-lg group-hover:shadow-cyan-500/25 transition-all duration-300"
-                    whileHover={{ scale: 1.05, rotate: 5 }}
-                    transition={{ type: "spring", stiffness: 300 }}
-                  >
-                    <Settings className="h-6 w-6 text-cyan-400 group-hover:text-cyan-300 transition-colors duration-300" />
-                  </motion.div>
-                  <div className="flex flex-col">
-                    <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent font-bold text-xl">
-                      Page Settings
-                    </span>
-                    <span className="text-xs text-gray-400 font-normal mt-1">
-                      Configure your PDF output
-                    </span>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6 relative z-10">
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4, type: "spring", stiffness: 300 }}
-                  className="space-y-4"
-                >
-                  <Label className="text-gray-300 font-semibold text-sm tracking-wide flex items-center gap-2">
-                    <div className="w-2 h-2 bg-gradient-to-r from-cyan-400 to-purple-400 rounded-full animate-pulse" />
-                    Orientation
-                  </Label>
-                  <Select
-                    value={pageSettings.orientation}
-                    onValueChange={(value) =>
-                      setPageSettings((prev) => ({
-                        ...prev,
-                        orientation: value as "portrait" | "landscape",
-                      }))
-                    }
-                  >
-                    <SelectTrigger className="bg-black/30 backdrop-blur-sm border border-white/20 text-white hover:border-cyan-400/50 transition-all duration-300 hover:bg-black/40 group relative overflow-hidden">
-                      <SelectValue placeholder="Select orientation" />
-                      <motion.div 
-                        className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-md"
-                      />
-                    </SelectTrigger>
-                    <SelectContent className="bg-black/80 backdrop-blur-xl border border-white/20 shadow-2xl">
-                      <SelectItem value="portrait" className="text-gray-200 hover:bg-white/10 focus:bg-white/10 transition-colors">
-                        <div className="flex items-center gap-3">
-                          <div className="w-4 h-5 bg-gradient-to-br from-cyan-400/60 to-purple-400/60 rounded-sm border border-cyan-400/30" />
-                          Portrait
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="landscape" className="text-gray-200 hover:bg-white/10 focus:bg-white/10 transition-colors">
-                        <div className="flex items-center gap-3">
-                          <div className="w-5 h-4 bg-gradient-to-br from-cyan-400/60 to-purple-400/60 rounded-sm border border-cyan-400/30" />
-                          Landscape
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </motion.div>
+          {downloadUrl && (
+            <div className="flex justify-center mt-8">
+              <SplitDownloadCard
+                title="Your PDF has been created from images"
+                primaryLabel="Download PDF"
+                downloadUrl={downloadUrl}
+                onDownload={() => {
+                  const a = document.createElement("a");
+                  a.href = downloadUrl;
+                  a.download = downloadName || "converted - Thundocs.pdf";
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                }}
+                contextLabel="Converted"
+                sizeLabel={downloadSizeLabel || undefined}
+              />
+            </div>
+          )}
 
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.5, type: "spring", stiffness: 300 }}
-                  className="space-y-4"
+          {!downloadUrl && images.length === 0 && !isUploading && (
+            <div className="flex justify-center w-full">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="w-full flex justify-center"
+              >
+                <div
+                  {...getRootProps()}
+                  className={`split-upload-card ${isDragActive ? "drag-active" : ""}`}
                 >
-                  <Label className="text-gray-300 font-semibold text-sm tracking-wide flex items-center gap-2">
-                    <div className="w-2 h-2 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full animate-pulse" />
-                    Page Size
-                  </Label>
-                  <Select
-                    value={pageSettings.size}
-                    onValueChange={(value) =>
-                      setPageSettings((prev) => ({
-                        ...prev,
-                        size: value as PageSettings["size"],
-                      }))
-                    }
-                  >
-                    <SelectTrigger className="bg-black/30 backdrop-blur-sm border border-white/20 text-white hover:border-purple-400/50 transition-all duration-300 hover:bg-black/40 group relative overflow-hidden">
-                      <SelectValue placeholder="Select size" />
-                      <motion.div 
-                        className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-pink-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-md"
-                      />
-                    </SelectTrigger>
-                    <SelectContent className="bg-black/80 backdrop-blur-xl border border-white/20 shadow-2xl">
-                      <SelectItem value="A4" className="text-white hover:bg-purple-500/20 focus:bg-purple-500/20 data-[state=checked]:bg-purple-500/40 data-[state=checked]:text-white transition-colors">
-                        <div className="flex items-center justify-between w-full">
-                          <span className="font-semibold">A4</span>
-                          <span className="text-sm text-purple-200 font-mono">(210×297mm)</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="A3" className="text-white hover:bg-purple-500/20 focus:bg-purple-500/20 data-[state=checked]:bg-purple-500/40 data-[state=checked]:text-white transition-colors">
-                        <div className="flex items-center justify-between w-full">
-                          <span className="font-semibold">A3</span>
-                          <span className="text-sm text-purple-200 font-mono">(297×420mm)</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="A5" className="text-white hover:bg-purple-500/20 focus:bg-purple-500/20 data-[state=checked]:bg-purple-500/40 data-[state=checked]:text-white transition-colors">
-                        <div className="flex items-center justify-between w-full">
-                          <span className="font-semibold">A5</span>
-                          <span className="text-sm text-purple-200 font-mono">(148×210mm)</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="Letter" className="text-white hover:bg-purple-500/20 focus:bg-purple-500/20 data-[state=checked]:bg-purple-500/40 data-[state=checked]:text-white transition-colors">
-                        <div className="flex items-center justify-between w-full">
-                          <span className="font-semibold">Letter</span>
-                          <span className="text-sm text-purple-200 font-mono">(8.5×11in)</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="Legal" className="text-white hover:bg-purple-500/20 focus:bg-purple-500/20 data-[state=checked]:bg-purple-500/40 data-[state=checked]:text-white transition-colors">
-                        <div className="flex items-center justify-between w-full">
-                          <span className="font-semibold">Legal</span>
-                          <span className="text-sm text-purple-200 font-mono">(8.5×14in)</span>
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </motion.div>
-
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="space-y-3"
-                >
-                  <div className="flex items-center justify-between">
-                    <Label className="text-gray-300 font-semibold text-sm tracking-wide flex items-center gap-2">
-                      <div className="w-2 h-2 bg-gradient-to-r from-pink-400 to-red-400 rounded-full animate-pulse" />
-                      Margin
-                    </Label>
-                    <motion.div 
-                      className="px-3 py-1 bg-gradient-to-r from-pink-500/20 to-red-500/20 rounded-full border border-pink-400/30 backdrop-blur-sm"
-                      whileHover={{ scale: 1.05 }}
-                      transition={{ type: "spring", stiffness: 400 }}
+                  <div className="flex flex-col items-center gap-4">
+                    <div
+                      style={{
+                        width: 50,
+                        height: 50,
+                        borderRadius: 15,
+                        background: "rgba(255,255,255,0.8)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        marginBottom: "1rem",
+                        boxShadow: "0 4px 10px rgba(0,0,0,0.05)",
+                      }}
                     >
-                      <span className="text-sm font-medium text-pink-300">
-                        {pageSettings.margin}px
-                      </span>
-                    </motion.div>
+                      <svg
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                      </svg>
+                    </div>
+
+                    <h3
+                      style={{
+                        marginBottom: "0.5rem",
+                        fontWeight: 600,
+                        fontSize: "1.25rem",
+                        color: "#111827",
+                      }}
+                    >
+                      {isDragActive ? "Drop files here" : "Images to PDF"}
+                    </h3>
+                    <p style={{ fontSize: "0.875rem", color: "#666", marginBottom: 0 }}>
+                      JPG, PNG, BMP, WebP, GIF • drag & drop or click
+                    </p>
+
+                    <button
+                      type="button"
+                      className="btn-main outline-none focus:outline-none focus:ring-0"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        open();
+                      }}
+                    >
+                      Select Images
+                    </button>
                   </div>
-                  <div className="relative">
+                </div>
+              </motion.div>
+            </div>
+          )}
+
+          {!downloadUrl && isUploading && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <UploadingRing label="Uploading images..." />
+            </motion.div>
+          )}
+
+          {!downloadUrl && images.length > 0 && (
+            isProcessing ? (
+              <UploadingRing label="Converting images to PDF..." />
+            ) : (
+            <>
+              <div className="grid gap-6 md:grid-cols-[220px_1fr] items-start">
+                <div className="space-y-3">
+                  {isMobile && (
+                    <button
+                      type="button"
+                      onClick={() => setShowPageSettingsMobile((prev) => !prev)}
+                      className="w-full flex items-center justify-between rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 px-3 py-2 text-xs font-medium text-[#FFFFFF] transition-all"
+                    >
+                      <span>Page Settings</span>
+                      <ChevronDown
+                        className={`w-4 h-4 transition-transform ${
+                          showPageSettingsMobile ? "rotate-180" : ""
+                        }`}
+                      />
+                    </button>
+                  )}
+
+                  {(!isMobile || showPageSettingsMobile) && (
+                    <div
+                      className="glass-panel rounded-2xl p-4 space-y-4"
+                      style={{
+                        boxShadow:
+                          "-1.5px -1.5px 2px -2px var(--white, rgba(255, 255, 255, 1)), 5px 5px 30px rgba(0, 0, 0, 0.2)",
+                        border: "0.5px solid",
+                        borderColor:
+                          "rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.3) transparent rgba(255, 255, 255, 0.3)",
+                        backgroundImage:
+                          "linear-gradient(to bottom right, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.05))",
+                      }}
+                    >
+                      <div>
+                        <p className="text-xs font-medium text-[#FFFFFF] uppercase tracking-wide">
+                          Page Settings
+                        </p>
+                        <p className="text-xs text-[#FFFFFF] mt-1">Layout controls</p>
+                      </div>
+
+                      <div className="space-y-3">
+                    <p className="text-xs font-medium text-[#FFFFFF] uppercase tracking-wide flex items-center gap-2">
+                      <Layout className="w-3.5 h-3.5 text-[#FFFFFF]" />
+                      Orientation
+                    </p>
+                    <div className="grid grid-cols-1 gap-2">
+                      <button
+                        onClick={() => setPageSettings((prev) => ({ ...prev, orientation: "portrait" }))}
+                        className={`rounded-xl border px-3 py-2 text-xs transition-all outline-none focus:outline-none focus:ring-0 ${pageSettings.orientation === "portrait"
+                          ? "bg-cyan-500/15 border-cyan-400/40 text-[#FFFFFF]"
+                          : "bg-white/5 border-white/10 text-[#FFFFFF] hover:bg-white/10 hover:text-[#FFFFFF]"
+                          }`}
+                      >
+                        Portrait
+                      </button>
+                      <button
+                        onClick={() => setPageSettings((prev) => ({ ...prev, orientation: "landscape" }))}
+                        className={`rounded-xl border px-3 py-2 text-xs transition-all outline-none focus:outline-none focus:ring-0 ${pageSettings.orientation === "landscape"
+                          ? "bg-cyan-500/15 border-cyan-400/40 text-[#FFFFFF]"
+                          : "bg-white/5 border-white/10 text-[#FFFFFF] hover:bg-white/10 hover:text-[#FFFFFF]"
+                          }`}
+                      >
+                        Landscape
+                      </button>
+                    </div>
+                      </div>
+
+                      <div className="space-y-2">
+                    <p className="text-xs font-medium text-[#FFFFFF] uppercase tracking-wide flex items-center gap-2">
+                      <FileText className="w-3.5 h-3.5 text-[#FFFFFF]" />
+                      Page Size
+                    </p>
+                    <Select
+                      value={pageSettings.size}
+                      onValueChange={(value) =>
+                        setPageSettings((prev) => ({
+                          ...prev,
+                          size: value as PageSettings["size"],
+                        }))
+                      }
+                    >
+                      <SelectTrigger className="h-9 border-white/15 bg-white/5 text-xs text-[#FFFFFF]">
+                        <SelectValue placeholder="Select size" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white/10 backdrop-blur-xl border border-white/15 text-xs text-[#FFFFFF] rounded-2xl shadow-[0_18px_45px_-20px_rgba(15,23,42,0.9)]">
+                        <SelectItem value="A4" className="rounded-xl bg-transparent data-[highlighted]:bg-white/10 data-[state=checked]:bg-cyan-500/15 data-[state=checked]:text-[#FFFFFF]">
+                          A4
+                        </SelectItem>
+                        <SelectItem value="Legal" className="rounded-xl bg-transparent data-[highlighted]:bg-white/10 data-[state=checked]:bg-cyan-500/15 data-[state=checked]:text-[#FFFFFF]">
+                          Legal
+                        </SelectItem>
+                        <SelectItem value="Letter" className="rounded-xl bg-transparent data-[highlighted]:bg-white/10 data-[state=checked]:bg-cyan-500/15 data-[state=checked]:text-[#FFFFFF]">
+                          Letter
+                        </SelectItem>
+                        <SelectItem value="Fit" className="rounded-xl bg-transparent data-[highlighted]:bg-white/10 data-[state=checked]:bg-cyan-500/15 data-[state=checked]:text-[#FFFFFF]">
+                          Fit to Image
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-medium text-[#FFFFFF] uppercase tracking-wide flex items-center gap-2">
+                        <Move className="w-3.5 h-3.5 text-[#FFFFFF]" />
+                        Margin
+                      </p>
+                      <span className="text-xs text-[#FFFFFF]">{pageSettings.margin}px</span>
+                    </div>
                     <Slider
                       value={[pageSettings.margin]}
                       onValueChange={([value]) =>
@@ -970,555 +737,244 @@ export default function ImageToPdfPage() {
                       max={100}
                       min={0}
                       step={5}
-                      className="mt-2 [&_[role=slider]]:bg-gradient-to-r [&_[role=slider]]:from-pink-400 [&_[role=slider]]:to-red-400 [&_[role=slider]]:border-0 [&_[role=slider]]:shadow-lg [&_[role=slider]]:shadow-pink-500/25"
                     />
-                    <div className="flex justify-between text-xs text-gray-400 mt-2">
-                      <span>0px</span>
-                      <span>50px</span>
-                      <span>100px</span>
+                    <div className="flex justify-between gap-2 pt-1">
+                      {[
+                        { label: "No margin", value: 0 },
+                        { label: "Default", value: 20 },
+                        { label: "Print safe", value: 35 },
+                      ].map((preset) => (
+                        <button
+                          key={preset.label}
+                          onClick={() => setPageSettings((prev) => ({ ...prev, margin: preset.value }))}
+                          className={`text-[8px] px-1.5 py-0.5 rounded transition-colors outline-none focus:outline-none focus:ring-0 ${pageSettings.margin === preset.value
+                            ? "text-[#FFFFFF] bg-cyan-500/10 border border-cyan-500/20"
+                            : "text-[#FFFFFF] hover:bg-white/5"
+                            }`}
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
                     </div>
-                  </div>
-                </motion.div>
-            </CardContent>
-           </Card>
-         </motion.div>
-       </div>
+                      </div>
 
-        {/* Main Content */}
-        <div className="lg:col-span-3">
-          {/* Upload Area */}
-          {images.length === 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 30, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="mb-8"
-            >
-              <div {...getRootProps()}>
-                <motion.div
-                  className={`relative border-2 border-dashed rounded-3xl p-8 sm:p-12 lg:p-16 text-center transition-all duration-500 overflow-hidden backdrop-blur-xl ${
-                    isDragActive
-                      ? "border-cyan-400/60 bg-gradient-to-br from-cyan-400/20 via-blue-400/15 to-purple-400/10 scale-[1.02] shadow-2xl shadow-cyan-500/25"
-                      : "border-white/20 hover:border-cyan-400/40 bg-gradient-to-br from-white/5 to-white/10 hover:from-cyan-500/10 hover:to-blue-500/10 hover:scale-[1.01] shadow-xl hover:shadow-2xl hover:shadow-cyan-500/20"
-                  }`}
-                  whileHover={{ y: -2 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                <input {...getInputProps()} />
-                
-                {/* Enhanced background decorations */}
-                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-blue-500/5 opacity-0 hover:opacity-100 transition-opacity duration-700"></div>
-                <div className="absolute top-0 left-0 w-32 h-32 bg-gradient-to-br from-pink-500/10 to-transparent rounded-full blur-xl animate-pulse"></div>
-                <div className="absolute bottom-0 right-0 w-40 h-40 bg-gradient-to-tl from-blue-500/10 to-transparent rounded-full blur-xl animate-pulse delay-1000"></div>
-                
-                <div className="relative z-10">
-                  <motion.div 
-                    className={`mx-auto mb-6 sm:mb-8 p-4 sm:p-6 rounded-3xl bg-gradient-to-br from-cyan-500/20 via-blue-500/15 to-purple-500/20 w-fit backdrop-blur-sm border border-white/10 shadow-2xl ${
-                      isDragActive ? "shadow-cyan-500/50" : "shadow-white/10"
-                    }`}
-                    animate={{
-                      scale: isDragActive ? 1.1 : 1,
-                      rotate: isDragActive ? 12 : 0,
-                    }}
-                    whileHover={{ scale: 1.05, rotate: 3 }}
-                    transition={{ type: "spring", stiffness: 300 }}
-                  >
-                    <Upload className={`h-10 w-10 sm:h-12 sm:w-12 lg:h-16 lg:w-16 transition-all duration-500 ${
-                      isDragActive ? "text-cyan-300 drop-shadow-lg" : "text-gray-300 group-hover:text-cyan-400"
-                    }`} />
-                  </motion.div>
-                  
-                  <motion.h3 
-                    className="text-xl sm:text-2xl lg:text-3xl font-bold mb-3 sm:mb-4 bg-gradient-to-r from-white via-cyan-200 to-blue-200 bg-clip-text text-transparent"
-                    animate={{ scale: isDragActive ? 1.05 : 1 }}
-                    transition={{ type: "spring", stiffness: 400 }}
-                  >
-                    {isDragActive
-                      ? "✨ Drop images here"
-                      : "🚀 Upload Images"}
-                  </motion.h3>
-                  
-                  <p className="text-gray-300 mb-6 sm:mb-8 text-sm sm:text-base lg:text-lg leading-relaxed">
-                    Drag and drop images here, or click to select files
-                  </p>
-                  
-                  <motion.div
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <Button className="bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 shadow-2xl hover:shadow-cyan-500/30 transition-all duration-500 px-6 sm:px-8 lg:px-10 py-3 sm:py-4 lg:py-5 text-sm sm:text-base lg:text-lg font-semibold border border-white/20 backdrop-blur-sm">
-                      <Upload className="h-5 w-5 sm:h-6 sm:w-6 mr-3 sm:mr-4" />
-                      Choose Files
-                    </Button>
-                  </motion.div>
-                  
-                  <div className="mt-6 sm:mt-8 flex items-center justify-center space-x-3 sm:space-x-6">
-                    <div className="h-px bg-gradient-to-r from-transparent via-cyan-500/30 to-transparent flex-1"></div>
-                    <motion.p 
-                      className="text-xs sm:text-sm text-gray-400 px-3 sm:px-5 py-2 rounded-full bg-white/5 backdrop-blur-sm border border-white/10"
-                      whileHover={{ scale: 1.05 }}
-                      transition={{ type: "spring", stiffness: 400 }}
-                    >
-                      ✨ Supports: JPG, PNG, GIF, BMP, WebP
-                    </motion.p>
-                    <div className="h-px bg-gradient-to-r from-transparent via-cyan-500/30 to-transparent flex-1"></div>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-          </motion.div>
-          )}
+                      <div className="space-y-2">
+                    <p className="text-xs font-medium text-[#FFFFFF] uppercase tracking-wide">Thumbnail Size</p>
+                    <Select value={thumbnailSize} onValueChange={(value) => setThumbnailSize(value as typeof thumbnailSize)}>
+                      <SelectTrigger className="h-9 border-white/15 bg-white/5 text-xs text-[#FFFFFF]">
+                        <SelectValue placeholder="Select size" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white/10 backdrop-blur-xl border border-white/15 text-xs text-[#FFFFFF] rounded-2xl shadow-[0_18px_45px_-20px_rgba(15,23,42,0.9)]">
+                        <SelectItem value="small" className="rounded-xl bg-transparent data-[highlighted]:bg-white/10 data-[state=checked]:bg-cyan-500/15 data-[state=checked]:text-[#FFFFFF]">
+                          Small
+                        </SelectItem>
+                        <SelectItem value="medium" className="rounded-xl bg-transparent data-[highlighted]:bg-white/10 data-[state=checked]:bg-cyan-500/15 data-[state=checked]:text-[#FFFFFF]">
+                          Medium
+                        </SelectItem>
+                        <SelectItem value="large" className="rounded-xl bg-transparent data-[highlighted]:bg-white/10 data-[state=checked]:bg-cyan-500/15 data-[state=checked]:text-[#FFFFFF]">
+                          Large
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                      </div>
 
-          {/* Upload Progress */}
-          {isUploading && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="mb-6"
-            >
-              <Card className="bg-gray-800/50 border-gray-700">
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-3">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-cyan-400"></div>
-                    <span className="text-white">Uploading images...</span>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-
-          {/* Images Grid */}
-          {images.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="space-y-6"
-            >
-              {/* Add More Images Button */}
-              <div
-                {...getRootProps()}
-                className="relative border-2 border-dashed border-gray-600/50 hover:border-cyan-500/50 rounded-xl p-8 text-center transition-all duration-300 cursor-pointer group overflow-hidden"
-              >
-                <input {...getInputProps()} />
-                
-                {/* Background decoration */}
-                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                
-                <div className="relative z-10">
-                  <div className="mx-auto mb-3 p-3 rounded-xl bg-gradient-to-br from-cyan-500/10 to-blue-500/10 w-fit transition-transform duration-300 group-hover:scale-110">
-                    <Plus className="h-8 w-8 text-gray-400 group-hover:text-cyan-400 transition-colors duration-300" />
-                  </div>
-                  <p className="text-gray-400 group-hover:text-gray-300 transition-colors duration-300 font-medium">Add more images</p>
-                </div>
-              </div>
-
-              {/* Images Header */}
-              <div className="mb-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-gradient-to-br from-cyan-500/20 to-blue-500/20 rounded-lg">
-                      <Grid className="h-5 w-5 text-cyan-400" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold text-white">Image Gallery</h3>
-                      <p className="text-sm text-gray-400">{images.length} {images.length === 1 ? 'image' : 'images'} ready for conversion</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2 px-3 py-1.5 bg-gray-800/60 rounded-full border border-gray-700/50">
-                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                    <span className="text-xs text-gray-400 font-medium">Ready</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Live region for screen reader announcements */}
-              <div aria-live="polite" aria-atomic="true" className="sr-only">
-                {isKeyboardMode && focusedImageIndex !== null && (
-                  `Image ${focusedImageIndex + 1} of ${images.length} focused. ${images[focusedImageIndex]?.name}`
-                )}
-              </div>
-
-              {/* Keyboard Shortcuts Help Panel */}
-              {isKeyboardMode && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="fixed top-20 right-4 z-50 bg-gray-800/95 backdrop-blur-sm border border-gray-600 rounded-lg p-4 shadow-xl"
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-semibold text-white flex items-center">
-                      <GripVertical className="h-4 w-4 mr-2 text-cyan-400" />
-                      Image Hopper Controls
-                    </h4>
+                      <div className="space-y-2 pt-2">
                     <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0 text-gray-400 hover:text-white"
-                      onClick={() => {
-                        setIsKeyboardMode(false);
-                        setFocusedImageIndex(null);
-                      }}
+                      variant="outline"
+                      onClick={handleRotateAll}
+                      className="w-full h-9 text-xs border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 text-[#FFFFFF] hover:text-[#FFFFFF] transition-all flex items-center justify-center gap-2 outline-none focus:outline-none focus-visible:ring-0"
                     >
-                      ×
+                      <RotateCw className="w-3.5 h-3.5" />
+                      Rotate All Images
                     </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-6">
+                  <div 
+                    className="glass-panel rounded-2xl p-6"
+                    style={{
+                      boxShadow: "-1.5px -1.5px 2px -2px var(--white, rgba(255, 255, 255, 1)), 5px 5px 30px rgba(0, 0, 0, 0.2)",
+                      border: "0.5px solid",
+                      borderColor: "rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.3) transparent rgba(255, 255, 255, 0.3)",
+                      backgroundImage: "linear-gradient(to bottom right, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.05))"
+                    }}
+                  >
+                    {conversionError && (
+                      <div className="mb-4 text-xs text-red-200 bg-red-500/10 border border-red-500/40 rounded-xl px-3 py-2">
+                        {conversionError}
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between gap-4 flex-wrap">
+                      <div>
+                        <p className="text-xs font-medium text-[#FFFFFF] uppercase tracking-wide">Images Ready</p>
+                        <p className="text-sm text-[#FFFFFF]">{images.length} {images.length === 1 ? "image" : "images"}</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Button
+                          variant="ghost"
+                          onClick={handleClearAllImages}
+                          className="h-9 px-3 text-xs text-[#FFFFFF] hover:text-[#FFFFFF] hover:bg-white/10 outline-none focus:outline-none focus-visible:ring-0"
+                        >
+                          Clear all
+                        </Button>
+                        <Button
+                          className="bg-white/10 backdrop-blur-md border border-white/20 text-white h-10 px-6 rounded-xl font-medium uppercase tracking-[0.2em] text-xs shadow-xl hover:shadow-white/10 hover:border-white/40 transition-all hover:scale-105 active:scale-95 outline-none focus:outline-none focus-visible:ring-0"
+                          disabled={isProcessing || images.length === 0}
+                          onClick={async () => {
+                            setIsProcessing(true);
+                            setConversionError(null);
+                            try {
+                              const { jsPDF } = await import("jspdf");
+                              const doc = new jsPDF({
+                                orientation: pageSettings.orientation,
+                                unit: "mm",
+                                format: getPdfFormat(pageSettings.size),
+                              });
+
+                              for (let i = 0; i < images.length; i++) {
+                                const img = images[i];
+                                if (i > 0) doc.addPage();
+
+                                const imgData = await renderImageForPdf(img);
+
+                                const pageWidth = doc.internal.pageSize.getWidth();
+                                const pageHeight = doc.internal.pageSize.getHeight();
+                                const margin = pageSettings.margin;
+                                const availableWidth = pageWidth - margin * 2;
+                                const availableHeight = pageHeight - margin * 2;
+
+                                const imgProps = doc.getImageProperties(imgData);
+                                const imgRatio = imgProps.width / imgProps.height;
+
+                                let finalWidth = availableWidth;
+                                let finalHeight = availableWidth / imgRatio;
+
+                                if (finalHeight > availableHeight) {
+                                  finalHeight = availableHeight;
+                                  finalWidth = availableHeight * imgRatio;
+                                }
+
+                                const x = margin + (availableWidth - finalWidth) / 2;
+                                const y = margin + (availableHeight - finalHeight) / 2;
+
+                                doc.addImage(imgData, "JPEG", x, y, finalWidth, finalHeight, undefined, "FAST");
+                              }
+
+                              const fileName = "converted - Thundocs.pdf";
+                              const pdfBlob = doc.output("blob") as Blob;
+                              if (downloadUrl) URL.revokeObjectURL(downloadUrl);
+                              const url = URL.createObjectURL(pdfBlob);
+                              setDownloadUrl(url);
+                              setDownloadName(fileName);
+                              setDownloadSizeLabel(formatSizeLabel(pdfBlob.size));
+
+                              const a = document.createElement("a");
+                              a.href = url;
+                              a.download = fileName;
+                              a.click();
+                            } catch (error) {
+                              console.error("Error generating PDF:", error);
+                              setConversionError("Failed to generate PDF. Please try again.");
+                            } finally {
+                              setIsProcessing(false);
+                            }
+                          }}
+                        >
+                          Convert to PDF
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-2 text-xs">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-300">Navigate:</span>
-                      <span className="text-cyan-400 font-mono">↑ ↓ ← →</span>
+
+                  <div
+                    {...getRootProps()}
+                    className={`glass-panel rounded-2xl p-6 space-y-6 transition-all relative outline-none focus:outline-none focus:ring-0 ${isDragActive ? "ring-1 ring-white/20" : ""}`}
+                    style={{
+                      boxShadow: "-1.5px -1.5px 2px -2px var(--white, rgba(255, 255, 255, 1)), 5px 5px 30px rgba(0, 0, 0, 0.2)",
+                      border: "0.5px solid",
+                      borderColor: "rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.3) transparent rgba(255, 255, 255, 0.3)",
+                      backgroundImage: "linear-gradient(to bottom right, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.05))"
+                    }}
+                  >
+                    {isDragActive && !isSorting && (
+                      <div className="absolute inset-0 rounded-2xl backdrop-blur-md bg-black/30 flex items-center justify-center text-sm text-[#FFFFFF] pointer-events-none z-20">
+                        Drop it like it's hot
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-xl bg-white/5 border border-white/10">
+                          <Grid className="h-5 w-5 text-cyan-300" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-[#FFFFFF]">Image Gallery</h3>
+                          <p className="text-sm text-[#FFFFFF]">
+                            {images.length} {images.length === 1 ? "image" : "images"} ready for conversion
+                          </p>
+                          {interactionMessage && (
+                            <p className="text-xs text-[#FFFFFF] mt-1" aria-live="polite">
+                              {interactionMessage}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="relative" onClick={(e) => e.stopPropagation()}>
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={open}
+                          className="h-9 w-9 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 flex items-center justify-center transition-all shadow-lg hover:shadow-cyan-500/20 hover:-translate-y-0.5 outline-none focus:outline-none focus:ring-0"
+                          aria-label="Add more images"
+                        >
+                          <Plus className="h-5 w-5 text-cyan-300" />
+                        </motion.button>
+                      </div>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-300">Reorder:</span>
-                      <span className="text-cyan-400 font-mono">Ctrl + ← →</span>
+
+                    <div aria-live="polite" aria-atomic="true" className="sr-only">
+                      {isKeyboardMode && focusedImageIndex !== null && (
+                        `Image ${focusedImageIndex + 1} of ${images.length} focused. ${images[focusedImageIndex]?.name}`
+                      )}
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-300">Edit:</span>
-                      <span className="text-cyan-400 font-mono">Enter / Space</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-300">Delete:</span>
-                      <span className="text-cyan-400 font-mono">Del / Backspace</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-300">First/Last:</span>
-                      <span className="text-cyan-400 font-mono">Home / End</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-300">Exit:</span>
-                      <span className="text-cyan-400 font-mono">Esc</span>
-                    </div>
+
+                    <ImageReorderGrid
+                      images={images.map((img) => ({
+                        id: img.id,
+                        url: img.preview,
+                        name: img.name,
+                        width: img.width,
+                        height: img.height,
+                        filters: img.filters,
+                        activeFilter: img.activeFilter,
+                        rotation: img.rotation,
+                        flipHorizontal: img.flipHorizontal,
+                        flipVertical: img.flipVertical,
+                      }))}
+                      onReorder={(newOrder) => {
+                        setImages((prev) => newOrder.map((o) => prev.find((img) => img.id === o.id)!));
+                      }}
+                      onDelete={removeImage}
+                      onEdit={handleImageDoubleClick}
+                      onSelect={(imageId) => {
+                        setSelectedImageId(imageId);
+                      }}
+                      selectedId={selectedImageId}
+                      onSortStart={() => setIsSorting(true)}
+                      onSortEnd={() => setIsSorting(false)}
+                      pageSettings={pageSettings}
+                      thumbnailSize={thumbnailSize}
+                    />
                   </div>
-                </motion.div>
-              )}
-              
-              {/* Images Reorder Grid */}
-              <ImageReorderGrid
-                images={images.map(img => ({ id: img.id, url: img.preview, name: img.name }))}
-                onReorder={newOrder => {
-                  // Map reordered ids back to full ImageFile objects
-                  setImages(newOrder.map(o => images.find(img => img.id === o.id)!));
-                }}
-                onDelete={removeImage}
-                onEdit={handleImageDoubleClick}
-              />
-            </motion.div>
+                </div>
+              </div>
+            </>
+            )
           )}
         </div>
       </div>
-
-      {/* Advanced Editing Dialog */}
-      <Dialog open={showAdvanced} onOpenChange={setShowAdvanced}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-gray-800 border-gray-700">
-          <DialogHeader>
-            <DialogTitle className="text-white">
-              Edit Image: {selectedImage && images.find(img => img.id === selectedImage)?.name}
-            </DialogTitle>
-          </DialogHeader>
-          
-          {selectedImage && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Image Preview */}
-              <div className="space-y-4">
-                <div className="aspect-square bg-gray-900 rounded-lg overflow-hidden">
-                  <img
-                    src={images.find(img => img.id === selectedImage)?.preview}
-                    alt="Preview"
-                    className="w-full h-full object-contain"
-                    style={getImageStyle(images.find(img => img.id === selectedImage)!)}
-                  />
-                </div>
-                
-                {/* Quick Actions */}
-                <div className="flex items-center justify-center space-x-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => undo(selectedImage)}
-                    disabled={(historyIndex[selectedImage] || 0) <= 0}
-                  >
-                    <Undo className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => redo(selectedImage)}
-                    disabled={(historyIndex[selectedImage] || 0) >= (imageHistory[selectedImage]?.length || 1) - 1}
-                  >
-                    <Redo className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => resetToDefault(selectedImage)}
-                  >
-                    <Reset className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-              
-              {/* Enhanced Controls */}
-              <div className="space-y-6">
-                <Tabs value={activeTab} onValueChange={setActiveTab}>
-                  <TabsList className="grid w-full grid-cols-4 bg-gray-900">
-                    <TabsTrigger value="filters" className="text-white data-[state=active]:bg-cyan-600">
-                      <Filter className="h-4 w-4 mr-2" />
-                      Filters
-                    </TabsTrigger>
-                    <TabsTrigger value="effects" className="text-white data-[state=active]:bg-cyan-600">
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      Effects
-                    </TabsTrigger>
-                    <TabsTrigger value="transform" className="text-white data-[state=active]:bg-cyan-600">
-                      <RotateCw className="h-4 w-4 mr-2" />
-                      Transform
-                    </TabsTrigger>
-                    <TabsTrigger value="crop" className="text-white data-[state=active]:bg-cyan-600">
-                      <Crop className="h-4 w-4 mr-2" />
-                      Crop
-                    </TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="filters" className="space-y-4 mt-6">
-                    {/* Brightness */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-gray-300 flex items-center">
-                          <Sun className="h-4 w-4 mr-2 text-yellow-400" />
-                          Brightness
-                        </Label>
-                        <span className="text-sm text-gray-400">
-                          {images.find(img => img.id === selectedImage)?.filters.brightness}%
-                        </span>
-                      </div>
-                      <Slider
-                        value={[images.find(img => img.id === selectedImage)?.filters.brightness || 100]}
-                        onValueChange={([value]) => updateImageFilter(selectedImage, 'brightness', value)}
-                        max={200}
-                        min={0}
-                        step={1}
-                        className="[&_[role=slider]]:bg-yellow-400"
-                      />
-                    </div>
-                    
-                    {/* Contrast */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-gray-300 flex items-center">
-                          <ContrastIcon className="h-4 w-4 mr-2 text-purple-400" />
-                          Contrast
-                        </Label>
-                        <span className="text-sm text-gray-400">
-                          {images.find(img => img.id === selectedImage)?.filters.contrast}%
-                        </span>
-                      </div>
-                      <Slider
-                        value={[images.find(img => img.id === selectedImage)?.filters.contrast || 100]}
-                        onValueChange={([value]) => updateImageFilter(selectedImage, 'contrast', value)}
-                        max={200}
-                        min={0}
-                        step={1}
-                        className="[&_[role=slider]]:bg-purple-400"
-                      />
-                    </div>
-                    
-                    {/* Saturation */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-gray-300 flex items-center">
-                          <Droplets className="h-4 w-4 mr-2 text-blue-400" />
-                          Saturation
-                        </Label>
-                        <span className="text-sm text-gray-400">
-                          {images.find(img => img.id === selectedImage)?.filters.saturation}%
-                        </span>
-                      </div>
-                      <Slider
-                        value={[images.find(img => img.id === selectedImage)?.filters.saturation || 100]}
-                        onValueChange={([value]) => updateImageFilter(selectedImage, 'saturation', value)}
-                        max={200}
-                        min={0}
-                        step={1}
-                        className="[&_[role=slider]]:bg-blue-400"
-                      />
-                    </div>
-                    
-                    {/* Blur */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-gray-300 flex items-center">
-                          <CircleDashed className="h-4 w-4 mr-2 text-gray-400" />
-                          Blur
-                        </Label>
-                        <span className="text-sm text-gray-400">
-                          {images.find(img => img.id === selectedImage)?.filters.blur}px
-                        </span>
-                      </div>
-                      <Slider
-                        value={[images.find(img => img.id === selectedImage)?.filters.blur || 0]}
-                        onValueChange={([value]) => updateImageFilter(selectedImage, 'blur', value)}
-                        max={20}
-                        min={0}
-                        step={0.5}
-                        className="[&_[role=slider]]:bg-gray-400"
-                      />
-                    </div>
-                    
-                    {/* Sepia */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-gray-300 flex items-center">
-                          <Palette className="h-4 w-4 mr-2 text-amber-400" />
-                          Sepia
-                        </Label>
-                        <span className="text-sm text-gray-400">
-                          {images.find(img => img.id === selectedImage)?.filters.sepia}%
-                        </span>
-                      </div>
-                      <Slider
-                        value={[images.find(img => img.id === selectedImage)?.filters.sepia || 0]}
-                        onValueChange={([value]) => updateImageFilter(selectedImage, 'sepia', value)}
-                        max={100}
-                        min={0}
-                        step={1}
-                        className="[&_[role=slider]]:bg-amber-400"
-                      />
-                    </div>
-                    
-                    {/* Grayscale */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-gray-300 flex items-center">
-                          <Circle className="h-4 w-4 mr-2 text-gray-500" />
-                          Grayscale
-                        </Label>
-                        <span className="text-sm text-gray-400">
-                          {images.find(img => img.id === selectedImage)?.filters.grayscale}%
-                        </span>
-                      </div>
-                      <Slider
-                        value={[images.find(img => img.id === selectedImage)?.filters.grayscale || 0]}
-                        onValueChange={([value]) => updateImageFilter(selectedImage, 'grayscale', value)}
-                        max={100}
-                        min={0}
-                        step={1}
-                        className="[&_[role=slider]]:bg-gray-500"
-                      />
-                    </div>
-                  </TabsContent>
-                  
-                  <TabsContent value="effects" className="space-y-4 mt-6">
-                    {/* Vignette */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-gray-300 flex items-center">
-                          <Aperture className="h-4 w-4 mr-2 text-indigo-400" />
-                          Vignette
-                        </Label>
-                        <span className="text-sm text-gray-400">
-                          {images.find(img => img.id === selectedImage)?.effects?.vignette || 0}%
-                        </span>
-                      </div>
-                      <Slider
-                        value={[images.find(img => img.id === selectedImage)?.effects?.vignette || 0]}
-                        onValueChange={([value]) => updateImageEffect(selectedImage, 'vignette', value)}
-                        max={100}
-                        min={0}
-                        step={1}
-                        className="[&_[role=slider]]:bg-indigo-400"
-                      />
-                    </div>
-                    
-                    {/* Noise */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-gray-300 flex items-center">
-                          <Brush className="h-4 w-4 mr-2 text-green-400" />
-                          Noise
-                        </Label>
-                        <span className="text-sm text-gray-400">
-                          {images.find(img => img.id === selectedImage)?.effects?.noise || 0}%
-                        </span>
-                      </div>
-                      <Slider
-                        value={[images.find(img => img.id === selectedImage)?.effects?.noise || 0]}
-                        onValueChange={([value]) => updateImageEffect(selectedImage, 'noise', value)}
-                        max={100}
-                        min={0}
-                        step={1}
-                        className="[&_[role=slider]]:bg-green-400"
-                      />
-                    </div>
-                  </TabsContent>
-                  
-                  <TabsContent value="transform" className="space-y-4 mt-6">
-                    {/* Rotation */}
-                    <div className="space-y-3">
-                      <Label className="text-gray-300 flex items-center">
-                        <RotateCw className="h-4 w-4 mr-2 text-cyan-400" />
-                        Rotation
-                      </Label>
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => rotateImage(selectedImage, 'ccw')}
-                          className="border-gray-600 text-white hover:bg-gray-700"
-                        >
-                          <RotateCcw className="h-4 w-4" />
-                        </Button>
-                        <span className="text-sm text-gray-400 min-w-[60px] text-center">
-                          {images.find(img => img.id === selectedImage)?.rotation || 0}°
-                        </span>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => rotateImage(selectedImage, 'cw')}
-                          className="border-gray-600 text-white hover:bg-gray-700"
-                        >
-                          <RotateCw className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    {/* Flip */}
-                    <div className="space-y-3">
-                      <Label className="text-gray-300">Flip</Label>
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          size="sm"
-                          variant={images.find(img => img.id === selectedImage)?.flipHorizontal ? "default" : "outline"}
-                          onClick={() => flipImage(selectedImage, 'horizontal')}
-                          className="border-gray-600 text-white hover:bg-gray-700"
-                        >
-                          <FlipHorizontal className="h-4 w-4 mr-2" />
-                          Horizontal
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant={images.find(img => img.id === selectedImage)?.flipVertical ? "default" : "outline"}
-                          onClick={() => flipImage(selectedImage, 'vertical')}
-                          className="border-gray-600 text-white hover:bg-gray-700"
-                        >
-                          <FlipVertical className="h-4 w-4 mr-2" />
-                          Vertical
-                        </Button>
-                      </div>
-                    </div>
-                  </TabsContent>
-                  
-                  <TabsContent value="crop" className="space-y-4 mt-6">
-                    <div className="text-center text-gray-400">
-                      <Crop className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                      <p>Crop functionality coming soon</p>
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
 
       {/* Image Editor */}
       {inlineEditorOpen && editingImageId && (
@@ -1527,6 +983,24 @@ export default function ImageToPdfPage() {
           isOpen={inlineEditorOpen}
           onClose={handleInlineEditorCancel}
           onSave={handleInlineEditorSave}
+          onApplyToAll={handleApplyToAll}
+          onResetAll={handleResetAll}
+          onNext={() => {
+            const currentIndex = images.findIndex(img => img.id === editingImageId);
+            if (currentIndex < images.length - 1) {
+              setEditingImageId(images[currentIndex + 1].id);
+            }
+          }}
+          onPrevious={() => {
+            const currentIndex = images.findIndex(img => img.id === editingImageId);
+            if (currentIndex > 0) {
+              setEditingImageId(images[currentIndex - 1].id);
+            }
+          }}
+          hasNext={images.findIndex(img => img.id === editingImageId) < images.length - 1}
+          hasPrevious={images.findIndex(img => img.id === editingImageId) > 0}
+          currentIndex={images.findIndex(img => img.id === editingImageId)}
+          totalImages={images.length}
         />
       )}
     </div>

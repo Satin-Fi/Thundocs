@@ -60,6 +60,8 @@ interface ImageFile {
     saturation: number;
     blur: number;
     sepia: number;
+    warmth: number;
+    tint: number;
     grayscale: number;
     hueRotate: number;
     invert: number;
@@ -92,6 +94,8 @@ interface FilterPreset {
     saturation: number;
     blur: number;
     sepia: number;
+    warmth: number;
+    tint: number;
     grayscale: number;
     hueRotate: number;
     invert: number;
@@ -99,14 +103,14 @@ interface FilterPreset {
 }
 
 const filterPresets = [
-  { name: 'Original', icon: RefreshCw, filters: { brightness: 100, contrast: 100, saturation: 100, blur: 0, sepia: 0, grayscale: 0, hueRotate: 0, invert: 0 } },
-  { name: 'Vivid', icon: Zap, filters: { brightness: 110, contrast: 120, saturation: 130, blur: 0, sepia: 0, grayscale: 0, hueRotate: 0, invert: 0 } },
-  { name: 'Dramatic', icon: Contrast, filters: { brightness: 95, contrast: 140, saturation: 110, blur: 0, sepia: 0, grayscale: 0, hueRotate: 0, invert: 0 } },
-  { name: 'B&W', icon: Moon, filters: { brightness: 100, contrast: 110, saturation: 0, blur: 0, sepia: 0, grayscale: 100, hueRotate: 0, invert: 0 } },
-  { name: 'Sepia', icon: Camera, filters: { brightness: 110, contrast: 100, saturation: 80, blur: 0, sepia: 80, grayscale: 0, hueRotate: 0, invert: 0 } },
-  { name: 'Cool', icon: Droplets, filters: { brightness: 105, contrast: 105, saturation: 110, blur: 0, sepia: 0, grayscale: 0, hueRotate: 180, invert: 0 } },
-  { name: 'Warm', icon: Sun, filters: { brightness: 110, contrast: 100, saturation: 120, blur: 0, sepia: 20, grayscale: 0, hueRotate: 30, invert: 0 } },
-  { name: 'Vintage', icon: Aperture, filters: { brightness: 105, contrast: 95, saturation: 85, blur: 0.5, sepia: 30, grayscale: 10, hueRotate: 15, invert: 0 } },
+  { name: 'Original', icon: RefreshCw, filters: { brightness: 0, contrast: 0, saturation: 0, blur: 0, sepia: 0, warmth: 0, tint: 0, grayscale: 0, hueRotate: 0, invert: 0 } },
+  { name: 'Vivid', icon: Zap, filters: { brightness: 10, contrast: 20, saturation: 30, blur: 0, sepia: 0, warmth: 0, tint: 0, grayscale: 0, hueRotate: 0, invert: 0 } },
+  { name: 'Dramatic', icon: Contrast, filters: { brightness: -5, contrast: 40, saturation: 10, blur: 0, sepia: 0, warmth: 0, tint: 0, grayscale: 0, hueRotate: 0, invert: 0 } },
+  { name: 'B&W', icon: Moon, filters: { brightness: 0, contrast: 10, saturation: -100, blur: 0, sepia: 0, warmth: 0, tint: 0, grayscale: 100, hueRotate: 0, invert: 0 } },
+  { name: 'Sepia', icon: Camera, filters: { brightness: 10, contrast: 0, saturation: -20, blur: 0, sepia: 80, warmth: 0, tint: 0, grayscale: 0, hueRotate: 0, invert: 0 } },
+  { name: 'Cool', icon: Droplets, filters: { brightness: 5, contrast: 5, saturation: 10, blur: 0, sepia: 0, warmth: -20, tint: 0, grayscale: 0, hueRotate: 180, invert: 0 } },
+  { name: 'Warm', icon: Sun, filters: { brightness: 10, contrast: 0, saturation: 20, blur: 0, sepia: 20, warmth: 30, tint: 0, grayscale: 0, hueRotate: 30, invert: 0 } },
+  { name: 'Vintage', icon: Aperture, filters: { brightness: 5, contrast: -5, saturation: -15, blur: 0.5, sepia: 30, warmth: 20, tint: 0, grayscale: 10, hueRotate: 15, invert: 0 } },
 ];
 
 const aspectRatios = [
@@ -220,8 +224,22 @@ export default function InlineImageEditor({ image, isOpen, onClose, onSave }: In
 
   // Update current image when prop changes
   useEffect(() => {
-    setCurrentImage(image);
-    setHistory([image]);
+    let initializedImage = { ...image };
+    
+    // Check for legacy filter values (100-based) and convert to 0-based
+    if (initializedImage.filters.brightness === 100 && 
+        initializedImage.filters.contrast === 100 && 
+        initializedImage.filters.saturation === 100) {
+      initializedImage.filters = {
+        ...initializedImage.filters,
+        brightness: 0,
+        contrast: 0,
+        saturation: 0
+      };
+    }
+
+    setCurrentImage(initializedImage);
+    setHistory([initializedImage]);
     setHistoryIndex(0);
   }, [image]);
 
@@ -267,6 +285,24 @@ export default function InlineImageEditor({ image, isOpen, onClose, onSave }: In
     onClose();
   }, [currentImage, onSave, onClose]);
 
+  const handleToolChange = (newTool: Tool | null) => {
+    // Revert to original/last saved image when switching tools
+    setCurrentImage(image);
+    setHistory([image]);
+    setHistoryIndex(0);
+    
+    setActiveTool(newTool);
+    
+    // Reset tool-specific states
+    setActiveAdjustment(null);
+    setActiveFilter(null);
+    setSelectedFilter(null);
+    setFilterIntensity(100);
+    setLastRotateAction(null);
+    setLastFlipAction(null);
+    setCropMode('rectangle');
+  };
+
   // Image transformation functions
   const getImageStyle = (img: ImageFile) => {
     const { rotation, flipHorizontal, flipVertical, filters } = img;
@@ -276,14 +312,18 @@ export default function InlineImageEditor({ image, isOpen, onClose, onSave }: In
       flipVertical ? 'scaleY(-1)' : ''
     ].filter(Boolean).join(' ');
 
+    const warmthSepia = Math.max(0, filters.warmth || 0);
+    const totalSepia = Math.min(100, (filters.sepia || 0) + warmthSepia);
+    const hueRotateVal = (filters.hueRotate || 0) + (filters.tint || 0);
+
     const filter = [
-      `brightness(${filters.brightness}%)`,
-      `contrast(${filters.contrast}%)`,
-      `saturate(${filters.saturation}%)`,
+      `brightness(${100 + filters.brightness}%)`,
+      `contrast(${100 + filters.contrast}%)`,
+      `saturate(${100 + filters.saturation}%)`,
       `blur(${filters.blur}px)`,
-      `sepia(${filters.sepia}%)`,
+      `sepia(${totalSepia}%)`,
       `grayscale(${filters.grayscale}%)`,
-      `hue-rotate(${filters.hueRotate}deg)`,
+      `hue-rotate(${hueRotateVal}deg)`,
       `invert(${filters.invert}%)`
     ].join(' ');
 
@@ -291,6 +331,25 @@ export default function InlineImageEditor({ image, isOpen, onClose, onSave }: In
       transform,
       transformOrigin: 'center',
       filter
+    };
+  };
+
+  const getWarmthOverlayStyle = (img: ImageFile) => {
+    const warmth = img.filters.warmth || 0;
+    if (warmth <= 0) {
+        // Cooling: Blue overlay
+        const opacity = Math.abs(warmth) / 200; // 0.5 max opacity
+        return {
+            backgroundColor: 'rgba(0, 100, 255, 1)',
+            opacity: opacity,
+            mixBlendMode: 'overlay' as const
+        };
+    }
+    // Warming is handled by Sepia filter mostly, but we can add a slight orange overlay for better tone
+    return {
+        backgroundColor: 'rgba(255, 100, 0, 1)',
+        opacity: warmth / 400, // Subtle
+        mixBlendMode: 'overlay' as const
     };
   };
 
@@ -387,6 +446,8 @@ export default function InlineImageEditor({ image, isOpen, onClose, onSave }: In
       saturation: originalFilters.saturation + (targetFilters.saturation - originalFilters.saturation) * factor,
       blur: originalFilters.blur + (targetFilters.blur - originalFilters.blur) * factor,
       sepia: originalFilters.sepia + (targetFilters.sepia - originalFilters.sepia) * factor,
+      warmth: originalFilters.warmth + (targetFilters.warmth - originalFilters.warmth) * factor,
+      tint: originalFilters.tint + (targetFilters.tint - originalFilters.tint) * factor,
       grayscale: originalFilters.grayscale + (targetFilters.grayscale - originalFilters.grayscale) * factor,
       hueRotate: originalFilters.hueRotate + (targetFilters.hueRotate - originalFilters.hueRotate) * factor,
       invert: originalFilters.invert + (targetFilters.invert - originalFilters.invert) * factor,
@@ -563,6 +624,8 @@ export default function InlineImageEditor({ image, isOpen, onClose, onSave }: In
                   { key: 'saturation', label: 'Saturation', icon: Droplets },
                   { key: 'blur', label: 'Blur', icon: Eye },
                   { key: 'sepia', label: 'Sepia', icon: Camera },
+                  { key: 'warmth', label: 'Warmth', icon: Sun },
+                  { key: 'tint', label: 'Tint', icon: Palette },
                   { key: 'grayscale', label: 'Grayscale', icon: Moon },
                   { key: 'hueRotate', label: 'Hue', icon: Palette },
                   { key: 'invert', label: 'Invert', icon: Aperture },
@@ -595,11 +658,13 @@ export default function InlineImageEditor({ image, isOpen, onClose, onSave }: In
                 </div>
                 {(() => {
                   const adjustmentConfig = {
-                    brightness: { min: 0, max: 200, step: 1, unit: '%' },
-                    contrast: { min: 0, max: 200, step: 1, unit: '%' },
-                    saturation: { min: 0, max: 200, step: 1, unit: '%' },
+                    brightness: { min: -100, max: 100, step: 1, unit: '%' },
+                    contrast: { min: -100, max: 100, step: 1, unit: '%' },
+                    saturation: { min: -100, max: 100, step: 1, unit: '%' },
                     blur: { min: 0, max: 10, step: 0.1, unit: 'px' },
                     sepia: { min: 0, max: 100, step: 1, unit: '%' },
+                    warmth: { min: -100, max: 100, step: 1, unit: '%' },
+                    tint: { min: -100, max: 100, step: 1, unit: '°' },
                     grayscale: { min: 0, max: 100, step: 1, unit: '%' },
                     hueRotate: { min: 0, max: 360, step: 1, unit: '°' },
                     invert: { min: 0, max: 100, step: 1, unit: '%' },
@@ -716,11 +781,16 @@ export default function InlineImageEditor({ image, isOpen, onClose, onSave }: In
             {!activeAdjustment ? (
               <div className="flex gap-2 overflow-x-scroll scrollbar-hide pb-2" style={{ WebkitOverflowScrolling: 'touch' }}>
                 {[
+                  { key: 'brightness', label: 'Brightness', icon: Sun },
+                  { key: 'contrast', label: 'Contrast', icon: Contrast },
                   { key: 'saturation', label: 'Saturation', icon: Droplets },
-                  { key: 'brightness', label: 'Warmth', icon: Sun },
-                  { key: 'hueRotate', label: 'Tint', icon: Palette },
-                  { key: 'contrast', label: 'Skin tone', icon: Contrast },
-                  { key: 'sepia', label: 'Blue tone', icon: Camera },
+                  { key: 'blur', label: 'Blur', icon: Eye },
+                  { key: 'sepia', label: 'Sepia', icon: Camera },
+                  { key: 'warmth', label: 'Warmth', icon: Sun },
+                  { key: 'tint', label: 'Tint', icon: Palette },
+                  { key: 'grayscale', label: 'Grayscale', icon: Moon },
+                  { key: 'hueRotate', label: 'Hue', icon: Palette },
+                  { key: 'invert', label: 'Invert', icon: Aperture },
                 ].map(({ key, label, icon: Icon }) => (
                   <button
                     key={key}
@@ -748,11 +818,13 @@ export default function InlineImageEditor({ image, isOpen, onClose, onSave }: In
                 </div>
                 {(() => {
                   const adjustmentConfig = {
-                    brightness: { min: 0, max: 200, step: 1, unit: '%' },
-                    contrast: { min: 0, max: 200, step: 1, unit: '%' },
-                    saturation: { min: 0, max: 200, step: 1, unit: '%' },
+                    brightness: { min: -100, max: 100, step: 1, unit: '%' },
+                    contrast: { min: -100, max: 100, step: 1, unit: '%' },
+                    saturation: { min: -100, max: 100, step: 1, unit: '%' },
                     blur: { min: 0, max: 10, step: 0.1, unit: 'px' },
                     sepia: { min: 0, max: 100, step: 1, unit: '%' },
+                    warmth: { min: -100, max: 100, step: 1, unit: '%' },
+                    tint: { min: -100, max: 100, step: 1, unit: '°' },
                     grayscale: { min: 0, max: 100, step: 1, unit: '%' },
                     hueRotate: { min: 0, max: 360, step: 1, unit: '°' },
                     invert: { min: 0, max: 100, step: 1, unit: '%' },
@@ -1135,6 +1207,12 @@ export default function InlineImageEditor({ image, isOpen, onClose, onSave }: In
                     onLoad={handleImageLoad}
                     onError={handleImageError}
                   />
+
+                  {/* Warmth Overlay */}
+                  <div 
+                    className="absolute inset-0 pointer-events-none z-10"
+                    style={getWarmthOverlayStyle(currentImage)}
+                  />
                   
                   {/* Crop Tool Overlay for Desktop */}
                   {activeTool === 'crop' && !isImageLoading && (
@@ -1176,8 +1254,7 @@ export default function InlineImageEditor({ image, isOpen, onClose, onSave }: In
                         <button
                           key={tool.id}
                           onClick={() => {
-                            setActiveTool(activeTool === tool.id ? null : tool.id as Tool);
-                            setActiveAdjustment(null);
+                            handleToolChange(activeTool === tool.id ? null : tool.id as Tool);
                           }}
                           className={`w-full flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 ${
                             activeTool === tool.id
@@ -1205,8 +1282,7 @@ export default function InlineImageEditor({ image, isOpen, onClose, onSave }: In
                      }}>
                       <button
                         onClick={() => {
-                          setActiveTool(null);
-                          setActiveAdjustment(null);
+                          handleToolChange(null);
                         }}
                         className="flex items-center gap-3 text-white/87 hover:text-white transition-all duration-200 p-2 rounded-lg bg-[#2a2a2a] hover:bg-[#333333] border border-gray-700/30"
                         style={{
@@ -1263,6 +1339,12 @@ export default function InlineImageEditor({ image, isOpen, onClose, onSave }: In
                     onLoad={handleImageLoad}
                     onError={handleImageError}
                   />
+
+                  {/* Warmth Overlay */}
+                  <div 
+                    className="absolute inset-0 pointer-events-none z-10"
+                    style={getWarmthOverlayStyle(currentImage)}
+                  />
                   
                   {/* Crop Tool Overlay for Mobile */}
                   {activeTool === 'crop' && !isImageLoading && (
@@ -1315,8 +1397,7 @@ export default function InlineImageEditor({ image, isOpen, onClose, onSave }: In
                         <button
                           key={tool.id}
                           onClick={() => {
-                            setActiveTool(activeTool === tool.id ? null : tool.id as Tool);
-                            setActiveAdjustment(null);
+                            handleToolChange(activeTool === tool.id ? null : tool.id as Tool);
                           }}
                           className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-200 cursor-pointer whitespace-nowrap ${
                           activeTool === tool.id

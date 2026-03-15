@@ -1,23 +1,24 @@
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   X,
-  Send,
   Bot,
   User,
   FileText,
-  Upload,
   Plus,
   Paperclip,
   RotateCcw,
   ArrowUp,
-  Sidebar,
   Menu,
+  Sun,
+  Moon,
 } from "lucide-react";
+import { useTheme } from "@/hooks/use-theme";
+import { ThundocsLogo } from "@/components/ThundocsLogo";
+
 // Dynamic import for PDF.js to avoid Vite bundling issues
 let pdfjsLib: any = null;
 
@@ -59,6 +60,7 @@ export default function AIFullScreenChat({
   isOpen,
   onClose,
 }: AIFullScreenChatProps) {
+  const { themeStyles, isNight, theme, setTheme } = useTheme();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
@@ -357,265 +359,279 @@ export default function AIFullScreenChat({
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-50 bg-gray-900 flex text-white"
+          className={`fixed inset-0 z-50 flex ${themeStyles.text}`}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
         >
-          {/* Sidebar */}
-          <motion.div
-            className={`bg-gray-800 border-r border-gray-700 flex flex-col transition-all duration-200 ${
-              sidebarOpen ? "w-64" : "w-0 overflow-hidden"
-            }`}
-            initial={{ x: -264 }}
-            animate={{ x: sidebarOpen ? 0 : -264 }}
-          >
-            <div className="p-4 border-b border-gray-700">
-              <Button
-                onClick={() => setMessages([])}
-                className="w-full bg-gray-700 border border-gray-600 text-white hover:bg-gray-600"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                New Chat
-              </Button>
-            </div>
-            <ScrollArea className="flex-1">
-              <div className="p-2">
-                <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wide px-2 mb-2">
-                  Recent Chats
-                </h3>
-                {conversationHistory.map((chat, index) => (
-                  <button
-                    key={index}
-                    className="w-full text-left px-2 py-2 text-sm text-gray-300 hover:bg-gray-700 rounded truncate"
-                  >
-                    {chat}
-                  </button>
-                ))}
-              </div>
-            </ScrollArea>
-          </motion.div>
-
-          {/* Main Chat Area */}
-          <div className="flex-1 flex flex-col">
-            {/* Header */}
-            <div className="border-b border-gray-700 px-4 py-3 flex items-center justify-between bg-gray-800">
-              <div className="flex items-center space-x-3">
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+          
+          <div className={`relative w-full h-full flex flex-col md:flex-row bg-transparent pointer-events-none`}>
+            {/* Sidebar */}
+            <motion.div
+              className={`pointer-events-auto h-full ${themeStyles.cardBg} ${themeStyles.cardBorder} border-r flex flex-col transition-all duration-200 ${
+                sidebarOpen ? "w-64" : "w-0 overflow-hidden"
+              }`}
+              initial={{ x: -264 }}
+              animate={{ x: sidebarOpen ? 0 : -264 }}
+            >
+              <div className={`p-4 border-b ${themeStyles.cardBorder}`}>
                 <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSidebarOpen(!sidebarOpen)}
-                  className="text-gray-400 hover:text-white hover:bg-gray-700"
+                  onClick={() => setMessages([])}
+                  className={`w-full ${themeStyles.inputBg} ${themeStyles.inputBorder} border ${themeStyles.text} hover:opacity-80`}
                 >
-                  <Menu className="h-5 w-5" />
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Chat
                 </Button>
-                <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                    <Bot className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <h1 className="font-medium text-white">PDF Assistant</h1>
-                    <p className="text-xs text-gray-400">
-                      Powered by AI • Always secure
-                    </p>
+              </div>
+              <ScrollArea className="flex-1">
+                <div className="p-2">
+                  <h3 className={`text-xs font-medium ${themeStyles.secondaryText} uppercase tracking-wide px-2 mb-2`}>
+                    Recent Chats
+                  </h3>
+                  {conversationHistory.map((chat, index) => (
+                    <button
+                      key={index}
+                      className={`w-full text-left px-2 py-2 text-sm ${themeStyles.text} hover:${isNight ? 'bg-gray-700' : 'bg-gray-100'} rounded truncate`}
+                    >
+                      {chat}
+                    </button>
+                  ))}
+                </div>
+              </ScrollArea>
+            </motion.div>
+
+            {/* Main Chat Area */}
+            <div className={`flex-1 flex flex-col pointer-events-auto h-full ${themeStyles.bg}`}>
+              {/* Header */}
+              <div className={`border-b ${themeStyles.headerBorder} ${themeStyles.headerBg} backdrop-blur-xl px-4 py-3 flex items-center justify-between`}>
+                <div className="flex items-center space-x-3">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSidebarOpen(!sidebarOpen)}
+                    className={`${themeStyles.secondaryText} hover:${themeStyles.text} hover:${isNight ? 'bg-gray-700' : 'bg-gray-100'}`}
+                  >
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                  <div className="flex items-center gap-3">
+                    <ThundocsLogo className="w-8 h-8 hover:scale-110 transition-transform duration-300" />
+                    <div className="flex flex-col">
+                      <h1 className={`font-bold ${themeStyles.text} text-lg leading-none tracking-tight`}>Thundocs</h1>
+                      <span className="text-[10px] font-medium text-gray-400 uppercase tracking-widest mt-0.5">AI PDF ASSISTANT</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onClose}
-                className="text-gray-400 hover:text-white hover:bg-gray-700"
-              >
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
 
-            {/* Messages */}
-            <ScrollArea className="flex-1 bg-gray-900">
-              <div className="max-w-3xl mx-auto px-4">
-                {messages.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full py-20">
-                    <div className="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mb-4">
-                      <Bot className="h-8 w-8 text-blue-400" />
-                    </div>
-                    <h2 className="text-2xl font-semibold text-white mb-2">
-                      How can I help with your PDFs?
-                    </h2>
-                    <p className="text-gray-400 mb-8 text-center max-w-md">
-                      Upload a PDF and I'll analyze it using AI. I can summarize, extract information, and answer questions about your documents.
-                    </p>
-                    {uploadedFiles.length > 0 && (
-                      <div className="mb-6 w-full max-w-2xl">
-                        <h3 className="text-sm font-medium text-gray-300 mb-3">Uploaded Documents:</h3>
-                        <div className="space-y-2">
-                          {uploadedFiles.map((file, index) => (
-                            <div key={index} className="flex items-center space-x-3 bg-gray-800 rounded-lg p-3 border border-gray-700">
-                              <FileText className="h-5 w-5 text-blue-400" />
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-white truncate">{file.name}</p>
-                                <p className="text-xs text-gray-400">{file.size}</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-2xl">
-                      {quickPrompts.map((prompt, index) => (
-                        <button
-                          key={index}
-                          onClick={() => setInput(prompt)}
-                          className="p-4 text-left border border-gray-700 rounded-lg hover:bg-gray-800 transition-colors bg-gray-800/50"
-                        >
-                          <p className="text-sm text-gray-200">{prompt}</p>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="py-8 space-y-8">
-                    {messages.map((message, index) => (
-                      <motion.div
-                        key={message.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        className="flex space-x-4"
-                      >
-                        <div className="flex-shrink-0">
-                          {message.type === "ai" ? (
-                            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                              <Bot className="h-5 w-5 text-white" />
-                            </div>
-                          ) : (
-                            <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
-                              <User className="h-5 w-5 text-white" />
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="mb-1">
-                            <span className="text-sm font-medium text-white">
-                              {message.type === "ai" ? "Assistant" : "You"}
-                            </span>
-                            <span className="text-xs text-gray-500 ml-2">
-                              {message.timestamp.toLocaleTimeString()}
-                            </span>
-                          </div>
-                          <div
-                            className={`prose prose-sm max-w-none ${
-                              message.type === "ai"
-                                ? "text-gray-200"
-                                : "text-gray-100"
-                            }`}
-                          >
-                            {message.content.split("\n").map((line, i) => (
-                              <p key={i} className="mb-2 last:mb-0">
-                                {line}
-                              </p>
-                            ))}
-                          </div>
-                        </div>
-                      </motion.div>
-                    ))}
-
-                    {isTyping && (
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="flex space-x-4"
-                      >
-                        <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                          <Bot className="h-5 w-5 text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="mb-1">
-                            <span className="text-sm font-medium text-white">
-                              Assistant
-                            </span>
-                          </div>
-                          <div className="flex items-center space-x-1">
-                            {[1, 2, 3].map((dot) => (
-                              <motion.div
-                                key={dot}
-                                className="w-2 h-2 bg-gray-500 rounded-full"
-                                animate={{
-                                  scale: [1, 1.2, 1],
-                                  opacity: [0.5, 1, 0.5],
-                                }}
-                                transition={{
-                                  duration: 1,
-                                  repeat: Infinity,
-                                  delay: dot * 0.2,
-                                }}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-                    <div ref={messagesEndRef} />
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-
-            {/* Input Area */}
-            <div className="border-t border-gray-700 bg-gray-800 p-4">
-              <div className="max-w-3xl mx-auto">
-                <div className="relative flex items-end space-x-3">
-                  <div className="flex-1 relative">
-                    <div className="relative border border-gray-600 rounded-lg bg-gray-700 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
-                      <Input
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyPress={handleKeyPress}
-                        placeholder="Message PDF Assistant..."
-                        className="border-0 bg-transparent text-white placeholder:text-gray-400 p-4 pr-12 resize-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                      />
-                      <div className="absolute right-2 bottom-2 flex items-center space-x-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={triggerFileUpload}
-                          disabled={isProcessing}
-                          className="text-gray-400 hover:text-gray-200 hover:bg-gray-600 h-8 w-8 p-0"
-                          title="Upload PDF"
-                        >
-                          {isProcessing ? (
-                            <motion.div
-                              animate={{ rotate: 360 }}
-                              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                            >
-                              <RotateCcw className="h-4 w-4" />
-                            </motion.div>
-                          ) : (
-                            <Paperclip className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept=".pdf"
-                        onChange={handleFileUpload}
-                        className="hidden"
-                      />
-                    </div>
-                  </div>
+                <div className="flex items-center gap-3">
+                   {/* Theme Toggle */}
                   <Button
-                    onClick={handleSend}
-                    disabled={!input.trim()}
-                    className="bg-blue-600 hover:bg-blue-700 text-white h-10 w-10 p-0 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-600"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setTheme(isNight ? 'day' : 'night')}
+                    className={`rounded-full ${themeStyles.buttonGhost} hover:rotate-12 transition-transform duration-300`}
                   >
-                    <ArrowUp className="h-4 w-4" />
+                    {isNight ? (
+                      <Sun className="h-5 w-5 text-amber-300" />
+                    ) : (
+                      <Moon className="h-5 w-5 text-indigo-500" />
+                    )}
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onClose}
+                    className={`${themeStyles.secondaryText} hover:${themeStyles.text} hover:${isNight ? 'bg-gray-700' : 'bg-gray-100'}`}
+                  >
+                    <X className="h-5 w-5" />
                   </Button>
                 </div>
-                <p className="text-xs text-gray-500 mt-2 text-center">
-                  AI can make mistakes. Check important info.
-                </p>
+              </div>
+
+              {/* Messages */}
+              <ScrollArea className={`flex-1 ${themeStyles.bg}`}>
+                <div className="max-w-3xl mx-auto px-4">
+                  {messages.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full py-20">
+                      <div className={`w-16 h-16 ${themeStyles.cardBg} rounded-full flex items-center justify-center mb-4 border ${themeStyles.cardBorder}`}>
+                        <Bot className="h-8 w-8 text-blue-400" />
+                      </div>
+                      <h2 className={`text-2xl font-semibold ${themeStyles.text} mb-2`}>
+                        How can I help with your PDFs?
+                      </h2>
+                      <p className={`${themeStyles.secondaryText} mb-8 text-center max-w-md`}>
+                        Upload a PDF and I'll analyze it using AI. I can summarize, extract information, and answer questions about your documents.
+                      </p>
+                      {uploadedFiles.length > 0 && (
+                        <div className="mb-6 w-full max-w-2xl">
+                          <h3 className={`text-sm font-medium ${themeStyles.secondaryText} mb-3`}>Uploaded Documents:</h3>
+                          <div className="space-y-2">
+                            {uploadedFiles.map((file, index) => (
+                              <div key={index} className={`flex items-center space-x-3 ${themeStyles.cardBg} rounded-lg p-3 border ${themeStyles.cardBorder}`}>
+                                <FileText className="h-5 w-5 text-blue-400" />
+                                <div className="flex-1 min-w-0">
+                                  <p className={`text-sm font-medium ${themeStyles.text} truncate`}>{file.name}</p>
+                                  <p className={`text-xs ${themeStyles.secondaryText}`}>{file.size}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-2xl">
+                        {quickPrompts.map((prompt, index) => (
+                          <button
+                            key={index}
+                            onClick={() => setInput(prompt)}
+                            className={`p-4 text-left border ${themeStyles.cardBorder} rounded-lg hover:${isNight ? 'bg-gray-800' : 'bg-gray-100'} transition-colors ${themeStyles.cardBg}`}
+                          >
+                            <p className={`text-sm ${themeStyles.text}`}>{prompt}</p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="py-8 space-y-8">
+                      {messages.map((message, index) => (
+                        <motion.div
+                          key={message.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                          className="flex space-x-4"
+                        >
+                          {message.type === "ai" && (
+                            <div className="flex-shrink-0">
+                              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                                <Bot className="h-5 w-5 text-white" />
+                              </div>
+                            </div>
+                          )}
+                          <div className={`flex-1 min-w-0 flex flex-col ${message.type === 'user' ? 'items-end' : 'items-start'}`}>
+                            <div className="mb-1 flex items-center space-x-2">
+                              <span className={`text-sm font-medium ${themeStyles.text}`}>
+                                {message.type === "ai" ? "Assistant" : "You"}
+                              </span>
+                              <span className={`text-xs ${themeStyles.secondaryText}`}>
+                                {message.timestamp.toLocaleTimeString()}
+                              </span>
+                            </div>
+                            <div
+                              className={`prose prose-sm max-w-none px-4 py-3 rounded-2xl shadow-sm ${
+                                message.type === 'user'
+                                  ? 'bg-blue-600 text-white rounded-tr-sm'
+                                  : `${themeStyles.cardBg} ${themeStyles.text} border ${themeStyles.cardBorder} rounded-tl-sm`
+                              }`}
+                            >
+                              {message.content.split("\n").map((line, i) => (
+                                <p key={i} className="mb-2 last:mb-0">
+                                  {line}
+                                </p>
+                              ))}
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
+
+                      {isTyping && (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="flex space-x-4"
+                        >
+                          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                            <Bot className="h-5 w-5 text-white" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="mb-1">
+                              <span className={`text-sm font-medium ${themeStyles.text}`}>
+                                Assistant
+                              </span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              {[1, 2, 3].map((dot) => (
+                                <motion.div
+                                  key={dot}
+                                  className={`w-2 h-2 ${isNight ? 'bg-gray-500' : 'bg-gray-400'} rounded-full`}
+                                  animate={{
+                                    scale: [1, 1.2, 1],
+                                    opacity: [0.5, 1, 0.5],
+                                  }}
+                                  transition={{
+                                    duration: 1,
+                                    repeat: Infinity,
+                                    delay: dot * 0.2,
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                      <div ref={messagesEndRef} />
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+
+              {/* Input Area */}
+              <div className={`border-t ${themeStyles.cardBorder} ${themeStyles.cardBg} p-4`}>
+                <div className="max-w-3xl mx-auto">
+                  <div className="relative flex items-end space-x-3">
+                    <div className="flex-1 relative">
+                      <div className={`relative border ${themeStyles.inputBorder} rounded-lg ${themeStyles.inputBg} focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-colors`}>
+                        <Input
+                          value={input}
+                          onChange={(e) => setInput(e.target.value)}
+                          onKeyPress={handleKeyPress}
+                          placeholder="Message PDF Assistant..."
+                          className={`border-0 bg-transparent ${themeStyles.text} placeholder:text-gray-400 p-4 pr-12 resize-none focus-visible:ring-0 focus-visible:ring-offset-0`}
+                        />
+                        <div className="absolute right-2 bottom-2 flex items-center space-x-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={triggerFileUpload}
+                            disabled={isProcessing}
+                            className={`text-gray-400 hover:${themeStyles.text} hover:${isNight ? 'bg-gray-600' : 'bg-gray-200'} h-8 w-8 p-0`}
+                            title="Upload PDF"
+                          >
+                            {isProcessing ? (
+                              <motion.div
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                              >
+                                <RotateCcw className="h-4 w-4" />
+                              </motion.div>
+                            ) : (
+                              <Paperclip className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept=".pdf"
+                          onChange={handleFileUpload}
+                          className="hidden"
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      onClick={handleSend}
+                      disabled={!input.trim()}
+                      className="bg-blue-600 hover:bg-blue-700 text-white h-10 w-10 p-0 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-600/20"
+                    >
+                      <ArrowUp className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className={`text-xs ${themeStyles.secondaryText} mt-2 text-center`}>
+                    AI can make mistakes. Check important info.
+                  </p>
+                </div>
               </div>
             </div>
           </div>

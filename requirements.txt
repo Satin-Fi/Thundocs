@@ -1,0 +1,15 @@
+easyocr
+fastapi
+uvicorn
+pillow
+numpy
+python-multipart
+opencv-python-headless
+pymupdf
+python-docx
+pdf2docx
+pdfplumber
+requests
+pyspellchecker
+docx2pdf
+pywin32
