@@ -1,7 +1,7 @@
 import { defineConfig, Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
-import { createServer } from "./server";
+import { createServer } from "./server/index";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -12,6 +12,21 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     outDir: "dist/spa",
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('pdfjs-dist') || id.includes('pdf-lib')) return 'pdf-engine';
+            if (id.includes('tesseract.js') || id.includes('opencv.js')) return 'ai-engine';
+            if (id.includes('three') || id.includes('fiber') || id.includes('drei')) return 'three-visuals';
+            if (id.includes('framer-motion')) return 'animations';
+            if (id.includes('lucide-react')) return 'icons';
+            if (id.includes('xlsx') || id.includes('jspdf') || id.includes('jszip')) return 'doc-utils';
+            return 'vendor';
+          }
+        },
+      },
+    },
   },
   plugins: [react(), expressPlugin()],
   resolve: {
