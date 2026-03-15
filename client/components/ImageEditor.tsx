@@ -2,6 +2,8 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { HexColorPicker } from 'react-colorful';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
   X,
@@ -47,12 +49,30 @@ import {
   Layers
 } from 'lucide-react';
 
+type AdjustControlId = keyof FilterValues;
+
+type AdjustControl = {
+  id: AdjustControlId;
+  name: string;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  min: number;
+  max: number;
+  step: number;
+  defaultValue: number;
+};
+
+type AdjustGroup = {
+  title: string;
+  controls: readonly AdjustControl[];
+};
+
 // Enhanced crop tool components
 import { EnhancedCropTool } from './crop/EnhancedCropTool';
 import { FourPointCropper, FourPointCropperHandle } from './crop/FourPointCropper';
 import { CenteredSlider } from '@/components/ui/centered-slider';
 import { filterPresets, getImageFilter, getVignetteStyle, getWarmthOverlayStyle, FilterValues } from '@/utils/imageUtils';
 import { MosaicBrushOverlay, MosaicBrushOverlayHandle } from './MosaicBrushOverlay';
+import { EraserBrushOverlay, EraserBrushOverlayHandle } from './EraserBrushOverlay';
 
 interface ImageFile {
   id: string;
@@ -111,7 +131,7 @@ const tools = [
   { id: 'text', name: 'Text', icon: Type, color: 'from-indigo-500 to-indigo-600' },
 ];
 
-const adjustGroups = [
+const adjustGroups: readonly AdjustGroup[] = [
   {
     title: 'Light',
     controls: [
@@ -132,7 +152,7 @@ const adjustGroups = [
       { id: 'sharpness', name: 'Sharpness', icon: Activity, min: -100, max: 100, step: 1, defaultValue: 0 },
     ]
   }
-] as const;
+];
 
 export default function ImageEditor({
   image,
@@ -149,7 +169,7 @@ export default function ImageEditor({
   totalImages = 0
 }: ImageEditorProps) {
   const [currentImage, setCurrentImage] = useState<ImageFile>(image);
-  const [activeTool, setActiveTool] = useState<Tool | null>('crop');
+  const [activeTool, setActiveTool] = useState<Tool | null>(null);
   const [selectedAspectRatio, setSelectedAspectRatio] = useState<AspectRatio>('square');
 
   // Reset dirty states when tool changes
@@ -188,34 +208,53 @@ export default function ImageEditor({
 
   const [isBrushDirty, setIsBrushDirty] = useState(false);
   const [brushSize, setBrushSize] = useState(30);
+  const [brushColor, setBrushColor] = useState('#ffffff');
   const brushOverlayRef = useRef<MosaicBrushOverlayHandle>(null);
+  
+  const [isEraserDirty, setIsEraserDirty] = useState(false);
+  const [eraserSize, setEraserSize] = useState(30);
+  const eraserOverlayRef = useRef<EraserBrushOverlayHandle>(null);
+
   const [activeAdjustTool, setActiveAdjustTool] = useState<string | null>(null);
+  const [isOriginalPreview, setIsOriginalPreview] = useState(false);
 
   const handleToolChange = (newTool: Tool) => {
-    if (activeTool !== newTool) {
-      // Only reset history when switching TO/FROM structural tools (crop/brush/eraser)
-      // Don't reset when switching between visual tools (filters/adjust) so filter changes persist
-      const structuralTools: Tool[] = ['crop', 'brush', 'eraser'];
-      const fromStructural = activeTool ? structuralTools.includes(activeTool) : false;
-      const toStructural = structuralTools.includes(newTool);
-
-      if (fromStructural || toStructural) {
-        setCurrentImage(image);
-        setHistory([image]);
-        setHistoryIndex(0);
-      }
-
-      // Reset tool-specific states
+    // Tapping the same tool toggles it off (closes secondary toolbar on mobile)
+    if (activeTool === newTool) {
+      setActiveTool(null);
       setIsCropDirty(false);
       setRotatePreview(0);
       setIsRotating(false);
       setIsFreeCropVisible(false);
-      setToolStartState(null);
-      setSelectedFilterName('Original');
       setIsBrushDirty(false);
+      setIsEraserDirty(false);
       setActiveAdjustTool(null);
+      return;
+    }
 
-      setActiveTool(newTool);
+    // Switching to a different tool
+    setIsCropDirty(false);
+    setRotatePreview(0);
+    setIsRotating(false);
+    setIsFreeCropVisible(false);
+    setIsBrushDirty(false);
+    setIsEraserDirty(false);
+
+    setActiveTool(newTool);
+
+    // Initialize per-tool sub state so mobile secondary UI shows immediately
+    if (newTool === 'adjust') {
+      const firstControl = adjustGroups[0]?.controls[0];
+      if (firstControl) {
+        setActiveAdjustTool(firstControl.id);
+      }
+    } else {
+      setActiveAdjustTool(null);
+    }
+
+    if (newTool === 'crop') {
+      setIsFreeCropVisible(true);
+      setToolStartState(currentImage);
     }
   };
 
@@ -380,7 +419,7 @@ export default function ImageEditor({
   // Calculate visual orientation and safe optical offset 
   const { isPortrait, verticalOffset, maxW, maxH, imgW, imgH, isRotatedSides } = React.useMemo(() => {
     if (!imgDimensions.width || !imgDimensions.height || !canvasSize.width || !canvasSize.height) {
-      return { isPortrait: false, verticalOffset: 0, maxW: '45%', maxH: '45%', imgW: '45%', imgH: '45%', isRotatedSides: false };
+      return { isPortrait: false, verticalOffset: 0, maxW: 0, maxH: 0, imgW: 0, imgH: 0, isRotatedSides: false };
     }
 
     // Safe Containment Logic:
@@ -391,7 +430,7 @@ export default function ImageEditor({
     const availableH = canvasSize.height - SAFE_PADDING * 2;
 
     if (availableW <= 0 || availableH <= 0) {
-      return { isPortrait: false, verticalOffset: 0, maxW: '45%', maxH: '45%', imgW: '45%', imgH: '45%', isRotatedSides: false };
+      return { isPortrait: false, verticalOffset: 0, maxW: 0, maxH: 0, imgW: 0, imgH: 0, isRotatedSides: false };
     }
 
     // Account for rotation 
@@ -551,6 +590,11 @@ export default function ImageEditor({
     setToolStartState(initializedImage);
   }, [image]);
 
+  const allAdjustControls: AdjustControl[] = React.useMemo(
+    () => adjustGroups.flatMap(group => group.controls),
+    []
+  );
+
   // Save to history
   const saveToHistory = useCallback((newImage: ImageFile) => {
     setHistory(prev => {
@@ -560,6 +604,9 @@ export default function ImageEditor({
     });
     setHistoryIndex(prev => prev + 1);
     setCurrentImage(newImage);
+    setSelectedFilterName(newImage.activeFilter ?? 'Original');
+    setRotatePreview(getRotationDeviation(newImage.rotation));
+    setToolStartState(newImage);
   }, [historyIndex]);
 
   // Undo/Redo functions
@@ -568,14 +615,20 @@ export default function ImageEditor({
       brushOverlayRef.current?.undo();
       return;
     }
+    if (activeTool === 'eraser') {
+      eraserOverlayRef.current?.undo();
+      return;
+    }
 
     if (historyIndex > 0) {
-      setHistoryIndex(prev => prev - 1);
-      const previousState = history[historyIndex - 1];
-
-      // Stop tracking changes for the current tool when we travel back
+      const newIndex = historyIndex - 1;
+      const previousState = history[newIndex];
+      setHistoryIndex(newIndex);
+      setCurrentImage(previousState);
+      setSelectedFilterName(previousState.activeFilter ?? 'Original');
+      setRotatePreview(getRotationDeviation(previousState.rotation));
+      setToolStartState(previousState);
       if (activeTool === 'crop') setIsCropDirty(false);
-      setToolStartState(null);
     }
   };
 
@@ -584,19 +637,32 @@ export default function ImageEditor({
       brushOverlayRef.current?.redo();
       return;
     }
+    if (activeTool === 'eraser') {
+      eraserOverlayRef.current?.redo();
+      return;
+    }
 
     if (historyIndex < history.length - 1) {
-      setHistoryIndex(prev => prev + 1);
-      const nextState = history[historyIndex + 1];
-
-      // Stop tracking changes for the current tool when we travel forward
+      const newIndex = historyIndex + 1;
+      const nextState = history[newIndex];
+      setHistoryIndex(newIndex);
+      setCurrentImage(nextState);
+      setSelectedFilterName(nextState.activeFilter ?? 'Original');
+      setRotatePreview(getRotationDeviation(nextState.rotation));
+      setToolStartState(nextState);
       if (activeTool === 'crop') setIsCropDirty(false);
-      setToolStartState(null);
     }
-  }; const handleReset = useCallback(() => {
+  };
+
+  const handleReset = useCallback(() => {
     if (activeTool === 'brush') {
       brushOverlayRef.current?.clearStrokes();
       setIsBrushDirty(false);
+      return;
+    }
+    if (activeTool === 'eraser') {
+      eraserOverlayRef.current?.clearStrokes();
+      setIsEraserDirty(false);
       return;
     }
 
@@ -608,8 +674,8 @@ export default function ImageEditor({
     setZoom(1);
     setPanOffset({ x: 0, y: 0 });
     setIsCropDirty(false);
-    setToolStartState(null);
-    setRotatePreview(0);
+    setToolStartState(originalImage);
+    setRotatePreview(getRotationDeviation(originalImage.rotation));
   }, [history, activeTool]);
 
   const handleSave = useCallback(() => {
@@ -653,6 +719,12 @@ export default function ImageEditor({
     const maxRatio = Math.max(ratio, 1 / ratio);
     return Math.cos(radians) + Math.sin(radians) * maxRatio;
   }, [rotatePreview, imgDimensions]);
+
+  const effectiveImage = isOriginalPreview && originalImageRef.current
+    ? originalImageRef.current
+    : currentImage;
+
+  const currentFilterCss = isOriginalPreview ? 'none' : getImageFilter(currentImage);
 
   const updateFilter = (name: keyof ImageFile['filters'], value: number) => {
     const newImage = {
@@ -708,8 +780,9 @@ export default function ImageEditor({
     };
     console.log('💾 Saving cropped image to history');
     saveToHistory(newImage);
-    onSave(newImage);
     setActiveTool(null);
+    setIsCropDirty(false);
+    setToolStartState(newImage);
     console.log('✨ Crop tool deactivated');
   };
 
@@ -783,6 +856,18 @@ export default function ImageEditor({
         setIsBrushDirty(false);
         setActiveTool(null);
       }
+    } else if (activeTool === 'eraser' && isEraserDirty) {
+      const composited = await eraserOverlayRef.current?.getCompositedImage(
+        currentImage.preview, imgDimensions.width, imgDimensions.height
+      );
+      if (composited) {
+        const newImage = { ...currentImage, preview: composited };
+        saveToHistory(newImage);
+        onSave(newImage);
+        eraserOverlayRef.current?.clearStrokes();
+        setIsEraserDirty(false);
+        setActiveTool(null);
+      }
     } else if (activeTool === 'crop' && hasChanges) {
       if (fourPointRef.current) {
         fourPointRef.current.apply();
@@ -797,6 +882,12 @@ export default function ImageEditor({
 
   // Touch gesture handlers
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 1 && zoom <= 1 && !touchState.isZooming && !touchState.isPanning) {
+      // Single-finger hold: temporary original preview for comparison
+      setIsOriginalPreview(true);
+      return;
+    }
+
     if (e.touches.length === 2) {
       // Two finger gesture - zoom
       const touch1 = e.touches[0];
@@ -830,6 +921,11 @@ export default function ImageEditor({
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     e.preventDefault();
 
+    if (isOriginalPreview) {
+      // While comparing, ignore move logic; preview stays until touch end.
+      return;
+    }
+
     if (touchState.isZooming && e.touches.length === 2) {
       const touch1 = e.touches[0];
       const touch2 = e.touches[1];
@@ -854,6 +950,7 @@ export default function ImageEditor({
   }, [touchState, zoom]);
 
   const handleTouchEnd = useCallback(() => {
+    setIsOriginalPreview(false);
     setTouchState({
       isZooming: false,
       isPanning: false,
@@ -996,7 +1093,6 @@ export default function ImageEditor({
 
     setIsRotating(true);
     setIsFreeCropVisible(false);
-    handleToolChange('crop');
 
     (e.target as Element).setPointerCapture(e.pointerId);
   };
@@ -1166,7 +1262,11 @@ export default function ImageEditor({
               <button
                 key={tool.id}
                 onClick={() => handleToolChange(tool.id as Tool)}
-                className={`p-2 rounded-lg transition-all duration-200 ${activeTool === tool.id ? 'text-blue-400 bg-blue-500/10 shadow-sm' : 'hover:text-white hover:bg-white/10 text-gray-300'}`}
+                className={`p-2 rounded-lg transition-all duration-200 outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
+                  activeTool === tool.id
+                    ? 'text-blue-400 bg-blue-500/10 shadow-sm'
+                    : 'hover:bg-white/10 text-white'
+                }`}
                 title={tool.label}
               >
                 <tool.icon className="w-4 h-4" />
@@ -1208,7 +1308,14 @@ export default function ImageEditor({
           <div className="flex-1 flex flex-col min-w-0 min-h-0 relative">
 
             {/* CANVAS AREA */}
-            <div ref={canvasRef} className="flex-1 relative overflow-hidden flex items-center justify-center bg-white/5 p-2 sm:p-8">
+            <div
+              ref={canvasRef}
+              className="flex-1 relative overflow-hidden flex items-center justify-center bg-white/5 p-2 sm:p-8"
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              onTouchCancel={handleTouchEnd}
+            >
 
               {/* Navigation Buttons (Overlay) */}
               {(onPrevious || onNext) && (
@@ -1282,20 +1389,20 @@ export default function ImageEditor({
                           exit={{ opacity: 0 }}
                           className="relative w-full h-full"
                         >
-                          <div className="absolute inset-0 z-10 pointer-events-none" style={getWarmthOverlayStyle(currentImage)} />
+                          <div className="absolute inset-0 z-10 pointer-events-none" style={isOriginalPreview ? {} : getWarmthOverlayStyle(currentImage)} />
                           <img
-                            src={currentImage.preview}
+                            src={effectiveImage.preview}
                             alt="Editing Background"
                             className="block object-contain pointer-events-none bg-transparent"
                             style={{
-                              filter: getImageFilter(currentImage),
+                              filter: currentFilterCss,
                               width: '100%',
                               height: '100%',
                               transition: 'filter 0.1s ease-out'
                             }}
                             draggable={false}
                           />
-                          <div className="absolute inset-0 z-20 pointer-events-none" style={getVignetteStyle(currentImage)} />
+                          <div className="absolute inset-0 z-20 pointer-events-none" style={isOriginalPreview ? {} : getVignetteStyle(currentImage)} />
                           {/* THE DIMMING OVERLAY */}
                           {activeTool === 'crop' && !isFreeCropVisible && (
                             <div className="absolute inset-0 z-30 bg-black/60 pointer-events-none" />
@@ -1327,22 +1434,22 @@ export default function ImageEditor({
                           exit={{ opacity: 0 }}
                           className="relative w-full h-full"
                         >
-                          <div className="absolute inset-0 z-10 pointer-events-none" style={getWarmthOverlayStyle(currentImage)} />
+                          <div className="absolute inset-0 z-10 pointer-events-none" style={isOriginalPreview ? {} : getWarmthOverlayStyle(currentImage)} />
                           <img
                             ref={imageRef}
-                            src={currentImage.preview}
+                            src={effectiveImage.preview}
                             alt="Editing Foreground"
                             onLoad={handleImageLoad}
                             className="block object-contain pointer-events-none bg-transparent"
                             style={{
-                              filter: getImageFilter(currentImage),
+                              filter: currentFilterCss,
                               width: '100%',
                               height: '100%',
                               transition: 'filter 0.1s ease-out'
                             }}
                             draggable={false}
                           />
-                          <div className="absolute inset-0 z-20 pointer-events-none" style={getVignetteStyle(currentImage)} />
+                          <div className="absolute inset-0 z-20 pointer-events-none" style={isOriginalPreview ? {} : getVignetteStyle(currentImage)} />
                           {activeTool === 'brush' && (
                             <MosaicBrushOverlay
                               ref={brushOverlayRef}
@@ -1350,7 +1457,18 @@ export default function ImageEditor({
                               height={imgH}
                               isActive={true}
                               brushSize={brushSize}
+                              color={brushColor}
                               onChange={setIsBrushDirty}
+                            />
+                          )}
+                          {activeTool === 'eraser' && (
+                            <EraserBrushOverlay
+                              ref={eraserOverlayRef}
+                              width={imgW}
+                              height={imgH}
+                              isActive={true}
+                              brushSize={eraserSize}
+                              onChange={setIsEraserDirty}
                             />
                           )}
                         </motion.div>
@@ -1436,14 +1554,24 @@ export default function ImageEditor({
             {/* 6. & 7. BOTTOM UI (Desktop Only) */}
             {!isMobile && (
               <motion.div
-              initial={false}
-              animate={{
-                height: activeTool === 'filters' || activeTool === 'adjust' ? 0 : '10rem',
-                opacity: activeTool === 'filters' || activeTool === 'adjust' ? 0 : 1
-              }}
-              transition={{ duration: 0.3, ease: 'easeInOut' }}
+                initial={false}
+                animate={{
+                  height:
+                    activeTool === 'crop' ||
+                    activeTool === 'brush' ||
+                    activeTool === 'eraser'
+                      ? '10rem'
+                      : 0,
+                  opacity:
+                    activeTool === 'crop' ||
+                    activeTool === 'brush' ||
+                    activeTool === 'eraser'
+                      ? 1
+                      : 0,
+                }}
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
                 className="bg-white/8 flex flex-col items-center justify-center z-50 overflow-hidden"
-            >
+              >
               {activeTool === 'crop' && (
                 <>
                   <div className="w-full max-w-xs sm:max-w-sm md:w-96 mb-4 px-4 sm:px-0">
@@ -1517,8 +1645,8 @@ export default function ImageEditor({
                     <button
                       type="button"
                       onClick={() => {
+                        // Stay in crop tool and switch to free 4-point mode
                         setIsFreeCropVisible(true);
-                        handleToolChange('crop');
 
                         // Always reset rotation to 0 when entering Free crop mode
                         // This ensures we start with a straight image for 4-point cropping
@@ -1543,22 +1671,90 @@ export default function ImageEditor({
               )}
 
               {activeTool === 'brush' && (
-                <div className="w-96 flex flex-col items-center gap-4">
-                  <div className="text-center text-xs font-medium text-gray-400 flex justify-between w-full px-4">
-                    <span>Brush Size</span>
-                    <span>{brushSize}px</span>
+                <div className="w-96 flex flex-col items-center gap-6 px-4 py-2">
+                  <div className="w-full flex flex-col gap-2">
+                    <div className="text-center text-xs font-medium text-white flex justify-between w-full">
+                      <span>Brush Size</span>
+                      <span>{brushSize}px</span>
+                    </div>
+                    <div className="w-full flex items-center gap-4">
+                      <span className="text-xs text-white">10</span>
+                      <input
+                        type="range"
+                        min="10"
+                        max="100"
+                        value={brushSize}
+                        onChange={(e) => setBrushSize(parseInt(e.target.value))}
+                        className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer"
+                        style={{ 
+                          accentColor: brushColor,
+                          backgroundColor: '#374151',
+                          backgroundImage: `linear-gradient(${brushColor}, ${brushColor})`,
+                          backgroundSize: `${((brushSize - 10) / 90) * 100}% 100%`,
+                          backgroundRepeat: 'no-repeat'
+                        }}
+                      />
+                      <span className="text-xs text-white">100</span>
+                    </div>
                   </div>
-                  <div className="w-full px-4 flex items-center gap-4">
-                    <span className="text-xs text-gray-500">10</span>
-                    <input
-                      type="range"
-                      min="10"
-                      max="100"
-                      value={brushSize}
-                      onChange={(e) => setBrushSize(parseInt(e.target.value))}
-                      className="flex-1 accent-blue-500 bg-gray-700 h-1.5 rounded-full appearance-none cursor-pointer"
-                    />
-                    <span className="text-xs text-gray-500">100</span>
+                  
+                  <div className="w-full flex flex-col gap-2">
+                    <div className="text-xs font-medium text-white">Brush Color</div>
+                    <div className="flex items-center justify-start gap-3 flex-wrap">
+                      {/* Preset Colors */}
+                      {['#ffffff', '#000000', '#ef4444', '#22c55e', '#3b82f6', '#eab308', '#d946ef'].map(c => (
+                        <button 
+                          key={c} 
+                          onClick={() => setBrushColor(c)} 
+                          className={`w-8 h-8 rounded-full border-2 ${brushColor === c ? 'border-white scale-110 shadow-sm' : 'border-transparent hover:scale-105 opacity-80 hover:opacity-100'} transition-all`} 
+                          style={{backgroundColor: c}} 
+                          title="Preset Color"
+                        />
+                      ))}
+                      {/* Custom Color Picker */}
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button 
+                            className="relative w-8 h-8 rounded-full overflow-hidden border-2 border-transparent hover:scale-105 transition-all outline-none" 
+                            title="Custom Color"
+                          >
+                            <div className="absolute inset-0 bg-gradient-to-tr from-blue-500 via-red-500 to-yellow-500 pointer-events-none" />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent side="top" className="w-auto p-3 bg-[#1e2330] border-white/10 shadow-xl rounded-xl">
+                          <HexColorPicker color={brushColor} onChange={setBrushColor} />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {activeTool === 'eraser' && (
+                <div className="w-96 flex flex-col items-center gap-6 px-4 py-2">
+                  <div className="w-full flex flex-col gap-2">
+                    <div className="text-center text-xs font-medium text-white flex justify-between w-full">
+                      <span>Eraser Size</span>
+                      <span>{eraserSize}px</span>
+                    </div>
+                    <div className="w-full flex items-center gap-4">
+                      <span className="text-xs text-white">10</span>
+                      <input
+                        type="range"
+                        min="10"
+                        max="100"
+                        value={eraserSize}
+                        onChange={(e) => setEraserSize(parseInt(e.target.value))}
+                        className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer accent-white"
+                        style={{
+                          backgroundColor: '#374151',
+                          backgroundImage: 'linear-gradient(#ffffff, #ffffff)',
+                          backgroundSize: `${((eraserSize - 10) / 90) * 100}% 100%`,
+                          backgroundRepeat: 'no-repeat'
+                        }}
+                      />
+                      <span className="text-xs text-white">100</span>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1571,18 +1767,18 @@ export default function ImageEditor({
             <div className="sm:w-[340px] w-full sm:max-h-full max-h-[45vh] bg-white/6 sm:border-l border-t border-white/20 flex flex-col overflow-y-auto p-5 shadow-[-4px_0_24px_rgba(15,23,42,0.35)] z-10">
               {adjustGroups.map((group) => (
                 <div key={group.title} className="mb-8 last:mb-0">
-                  <h3 className="text-sm font-semibold text-gray-200 mb-4">{group.title}</h3>
+                  <h3 className="text-sm font-semibold text-white mb-4">{group.title}</h3>
                   <div className="space-y-6">
                     {group.controls.map((control) => (
                       <div key={control.id} className="space-y-3">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <control.icon className="w-4 h-4 text-gray-400" />
-                            <label className="text-xs font-medium text-gray-300">
+                            <control.icon className="w-4 h-4 text-white" />
+                            <label className="text-xs font-medium text-white">
                               {control.name}
                             </label>
                           </div>
-                          <span className="text-xs text-gray-400 font-mono">
+                          <span className="text-xs text-white font-mono">
                             {Math.round(currentImage.filters[control.id as keyof ImageFile['filters']] as number || 0)}
                           </span>
                         </div>
@@ -1700,18 +1896,23 @@ export default function ImageEditor({
 
               {/* Apply to All Button */}
               {onApplyToAll && (
-                <div className="mt-6 pt-6 border-t border-[#333] space-y-3">
+                <div className="mt-6 pt-6 border-t border-white/15 space-y-3">
                   <button
                     onClick={isAppliedToAll ? handleResetAllClick : handleApplyToAllClick}
                     disabled={applyToAllFeedback || resetAllFeedback}
-                    className={`w-full bg-[#2a2a2d] hover:bg-[#333] border border-[#333] rounded-xl p-3 flex items-center justify-center gap-2 transition-all group shadow-sm text-sm font-medium ${applyToAllFeedback ? 'text-green-400' :
-                      resetAllFeedback ? 'text-red-400' :
-                        isAppliedToAll ? 'text-red-400' : 'text-gray-200'
-                      }`}
+                    className={`w-full bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl p-3 flex items-center justify-center gap-2 transition-all group shadow-sm text-sm font-medium ${
+                      applyToAllFeedback
+                        ? 'text-emerald-400'
+                        : resetAllFeedback
+                          ? 'text-red-400'
+                          : isAppliedToAll
+                            ? 'text-red-400'
+                            : 'text-gray-200'
+                    }`}
                   >
                     {applyToAllFeedback ? (
                       <>
-                        <Check className="w-4 h-4 text-green-400" />
+                        <Check className="w-4 h-4 text-emerald-400" />
                         Applied to All!
                       </>
                     ) : resetAllFeedback ? (
@@ -1731,7 +1932,7 @@ export default function ImageEditor({
                       </>
                     )}
                   </button>
-                  <p className="text-[10px] text-gray-500 text-center mt-2">
+                  <p className="text-[10px] text-gray-400 text-center mt-2">
                     {isAppliedToAll ? "Remove filters from all images" : "Apply current filters to all images"}
                   </p>
                 </div>
@@ -1743,21 +1944,39 @@ export default function ImageEditor({
         {/* --- MOBILE BOTTOM UI (Google Photos Style) --- */}
         {isMobile && (
           <div className="flex flex-col w-full flex-none bg-black/40 backdrop-blur-2xl border-t border-white/10 pb-4 pt-1 z-50 select-none">
-            {/* LEVEL 3: ACTIVE SLIDER */}
-            <div className="h-16 px-6 flex items-center justify-center w-full min-h-[64px]">
+            {/* LEVEL 3: ACTIVE SLIDER (only when a tool with slider is active) */}
+            <div
+              className={`px-6 flex items-center justify-center w-full ${
+                activeTool === 'adjust' ||
+                activeTool === 'crop' ||
+                activeTool === 'brush' ||
+                activeTool === 'eraser'
+                  ? 'py-2 min-h-[64px]'
+                  : 'py-0 min-h-0'
+              }`}
+            >
               {activeTool === 'adjust' && activeAdjustTool && (
                 <div className="w-full max-w-sm flex items-center gap-4">
                   <span className="text-xs text-gray-400 font-mono w-8 text-right">
                     {Math.round(currentImage.filters[activeAdjustTool as keyof ImageFile['filters']] as number || 0)}
                   </span>
+                  {(() => {
+                    const control = allAdjustControls.find(c => c.id === activeAdjustTool);
+                    const min = control?.min ?? -100;
+                    const max = control?.max ?? 100;
+                    const step = control?.step ?? 1;
+                    const value = currentImage.filters[activeAdjustTool as keyof ImageFile['filters']] as number || 0;
+                    return (
                   <CenteredSlider
-                    value={[currentImage.filters[activeAdjustTool as keyof ImageFile['filters']] as number || 0]}
-                    min={adjustGroups.flatMap(g => g.controls).find(c => c.id === activeAdjustTool)?.min || -100}
-                    max={adjustGroups.flatMap(g => g.controls).find(c => c.id === activeAdjustTool)?.max || 100}
-                    step={adjustGroups.flatMap(g => g.controls).find(c => c.id === activeAdjustTool)?.step || 1}
+                    value={[value]}
+                    min={min}
+                    max={max}
+                    step={step}
                     onValueChange={([val]) => updateFilter(activeAdjustTool as keyof ImageFile['filters'], val)}
                     className="flex-1"
                   />
+                    );
+                  })()}
                 </div>
               )}
               {activeTool === 'crop' && (
@@ -1807,16 +2026,84 @@ export default function ImageEditor({
                     max="100"
                     value={brushSize}
                     onChange={(e) => setBrushSize(parseInt(e.target.value))}
-                    className="flex-1 accent-white bg-gray-800 h-1 rounded-full appearance-none"
+                    className="flex-1 h-1 rounded-full appearance-none"
+                    style={{ 
+                      accentColor: brushColor,
+                      backgroundColor: '#1f2937',
+                      backgroundImage: `linear-gradient(${brushColor}, ${brushColor})`,
+                      backgroundSize: `${((brushSize - 10) / 90) * 100}% 100%`,
+                      backgroundRepeat: 'no-repeat'
+                    }}
+                  />
+                  <span className="text-xs text-gray-500">100</span>
+                </div>
+              )}
+              {activeTool === 'eraser' && (
+                <div className="w-full max-w-xs flex items-center gap-4">
+                  <span className="text-xs text-gray-500">10</span>
+                  <input
+                    type="range"
+                    min="10"
+                    max="100"
+                    value={eraserSize}
+                    onChange={(e) => setEraserSize(parseInt(e.target.value))}
+                    className="flex-1 accent-white h-1 rounded-full appearance-none"
+                    style={{ 
+                      backgroundColor: '#1f2937',
+                      backgroundImage: `linear-gradient(#ffffff, #ffffff)`,
+                      backgroundSize: `${((eraserSize - 10) / 90) * 100}% 100%`,
+                      backgroundRepeat: 'no-repeat'
+                    }}
                   />
                   <span className="text-xs text-gray-500">100</span>
                 </div>
               )}
             </div>
 
-            {/* LEVEL 2: SUB-TOOLS */}
-            <div className="h-[76px] flex items-center justify-center overflow-x-auto no-scrollbar px-4 gap-4 w-full border-b border-white/5 pb-2">
-              {activeTool === 'adjust' && adjustGroups.flatMap(g => g.controls).map(control => (
+            {/* LEVEL 2: SUB-TOOLS (only visible for active tool) */}
+            <div
+              className={`flex items-center overflow-x-auto no-scrollbar px-4 gap-4 w-full transition-all ${
+                activeTool === 'filters' ||
+                activeTool === 'adjust' ||
+                activeTool === 'brush' ||
+                activeTool === 'crop'
+                  ? 'h-[76px] border-b border-white/5 pb-2'
+                  : 'h-0 border-b-0 pb-0'
+              } ${
+                activeTool === 'filters' || activeTool === 'adjust' || activeTool === 'brush'
+                  ? 'justify-start'
+                  : 'justify-center'
+              }`}
+            >
+              {activeTool === 'brush' && (
+                <div className="flex items-center gap-4 px-2">
+                  {/* Preset Colors */}
+                  {['#ffffff', '#000000', '#ef4444', '#22c55e', '#3b82f6', '#eab308', '#d946ef'].map(c => (
+                    <button 
+                      key={c} 
+                      onClick={() => setBrushColor(c)} 
+                      className={`w-8 h-8 flex-shrink-0 rounded-full border-2 ${brushColor === c ? 'border-white scale-110 shadow-sm' : 'border-transparent hover:scale-105 opacity-80 hover:opacity-100'} transition-all`} 
+                      style={{backgroundColor: c}} 
+                      title="Preset Color"
+                    />
+                  ))}
+                  {/* Custom Color Picker */}
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button 
+                        className="relative w-8 h-8 flex-shrink-0 rounded-full overflow-hidden border-2 border-transparent hover:scale-105 transition-all outline-none" 
+                        title="Custom Color"
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-tr from-blue-500 via-red-500 to-yellow-500 pointer-events-none" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent side="top" className="w-auto p-3 bg-[#1e2330] border-white/10 shadow-xl rounded-xl">
+                      <HexColorPicker color={brushColor} onChange={setBrushColor} />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              )}
+              {activeTool === 'adjust' && allAdjustControls.map(control => (
                 <button
                   key={control.id}
                   onClick={() => setActiveAdjustTool(control.id)}
