@@ -1,733 +1,552 @@
-import React from "react";
-import { motion, useScroll, useTransform } from "framer-motion";
+import React, { useState } from "react";
+import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import ParticleBackground from "@/components/ParticleBackground";
-import AIFullScreenChat from "@/components/AIFullScreenChat";
-import BlockchainStatus from "@/components/BlockchainStatus";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from "@/contexts/AuthContext";
+import { t } from "@/utils/language";
+import { GlowingEffect } from "@/components/ui/glowing-effect";
 import {
   FileText,
   Scissors,
-  Merge,
   Minimize2,
-  Shield,
+  Lock,
+  Unlock,
   Image as ImageIcon,
-  Download,
-  Upload,
   Zap,
-  Star,
-  Users,
-  Globe,
   ArrowRight,
   Sparkles,
-  Rocket,
-  Bot,
-  Brain,
-  Cpu,
-  Lock,
-  MessageCircle,
+  ScanText,
+  MessageSquareText,
+  FileSpreadsheet,
+  Presentation,
+  UploadCloud,
+  Download,
+  Wand2,
+  Files,
+  FileImage,
+  FileStack,
+  PenTool,
+  Search,
+  LogIn,
+  User,
+  Menu
 } from "lucide-react";
+import { RightSideMenu } from "@/components/RightSideMenu";
 
+// Updated tool definitions with better icons
 const tools = [
   {
     title: "Merge PDFs",
-    description: "Combine multiple PDF files into one document",
-    icon: Merge,
+    description: "Merge multiple PDFs, slides and images into a single perfectly ordered document.",
+    icon: Files, // Better than Merge
     href: "/merge",
-    gradient: "from-blue-500 via-blue-600 to-purple-600",
-    delay: 0.1,
+    category: "essentials",
   },
   {
     title: "Split PDF",
-    description: "Split a PDF into separate pages or sections",
+    description: "Split a PDF by range or extract selected pages into clean new files.",
     icon: Scissors,
     href: "/split",
-    gradient: "from-purple-500 via-pink-500 to-red-500",
-    delay: 0.2,
+    category: "essentials",
   },
   {
     title: "Compress PDF",
-    description: "Reduce file size while maintaining quality",
+    description: "Shrink PDF size dramatically while keeping text readable and graphics sharp.",
     icon: Minimize2,
     href: "/compress",
-    gradient: "from-green-500 via-emerald-500 to-teal-600",
-    delay: 0.3,
+    category: "essentials",
   },
   {
     title: "PDF to Image",
-    description: "Convert PDF pages to JPG or PNG images",
-    icon: ImageIcon,
+    description: "Render each PDF page into crisp PNG or JPG images ready to share.",
+    icon: FileImage, // Specific
     href: "/pdf-to-image",
-    gradient: "from-orange-500 via-red-500 to-pink-600",
-    delay: 0.4,
+    category: "convert",
   },
   {
     title: "Protect PDF",
-    description: "Add password protection to your documents",
-    icon: Shield,
+    description: "Lock PDFs with passwords so only the right people can open and view them.",
+    icon: Lock, // Clearer than Shield
     href: "/protect",
-    gradient: "from-red-500 via-pink-500 to-purple-600",
-    delay: 0.5,
+    category: "essentials",
   },
   {
     title: "PDF to Word",
-    description: "Convert PDF documents to editable Word files",
+    description: "Turn PDFs into fully editable Word documents while preserving layout and fonts.",
     icon: FileText,
     href: "/pdf-to-word",
-    gradient: "from-teal-500 via-blue-500 to-indigo-600",
-    delay: 0.6,
+    category: "convert",
   },
   {
     title: "Image to PDF",
-    description: "Convert multiple images into a single PDF document",
-    icon: ImageIcon,
+    description: "Convert JPG, PNG, WEBP images into a pristine multi-page PDF with custom ordering.",
+    icon: FileStack, // Implies stacking images
     href: "/image-to-pdf",
-    gradient: "from-amber-500 via-orange-500 to-red-600",
-    delay: 0.7,
+    category: "convert",
   },
   {
     title: "AI OCR Engine",
-    description: "Extract text from PDFs and images with AI precision",
-    icon: Brain,
+    description: "Use AI-powered OCR to read and extract text from scans and images with high accuracy.",
+    icon: ScanText, // Perfect for OCR
     href: "/ai-ocr",
-    gradient: "from-green-400 via-blue-500 to-purple-600",
-    delay: 0.8,
+    category: "ai",
     isAI: true,
   },
   {
-    title: "AI PDF Analyzer",
-    description: "Intelligent document analysis and insights",
-    icon: Bot,
-    href: "/ai-pdf-analyzer",
-    gradient: "from-purple-500 via-pink-500 to-red-400",
-    delay: 0.9,
+    title: "AI PDF Chat",
+    description: "Chat with your PDFs, ask questions, and get instant answers from their content.",
+    icon: MessageSquareText, // Chat specific
+    href: "#",
+    category: "ai",
     isAI: true,
+    comingSoon: true,
   },
   {
-    title: "AI Form Filler",
-    description: "Intelligent PDF form completion with AI assistance",
-    icon: Cpu,
-    href: "/ai-form-filler",
-    gradient: "from-blue-500 via-purple-500 to-pink-600",
-    delay: 1.0,
-    isAI: true,
+    title: "Excel to PDF",
+    description: "Convert spreadsheets into clean, print-ready PDFs that keep tables and numbers intact.",
+    icon: FileSpreadsheet,
+    href: "/excel-to-pdf",
+    category: "convert",
+  },
+  {
+    title: "PowerPoint to PDF",
+    description: "Turn slide decks into polished PDF presentations ready to share or print.",
+    icon: Presentation,
+    href: "/powerpoint-to-pdf",
+    category: "convert",
+  },
+  {
+    title: "Unlock PDF",
+    description: "Remove known passwords from PDFs you own so you can open and edit them freely.",
+    icon: Unlock,
+    href: "/unlock-pdf",
+    category: "essentials",
+  },
+  {
+    title: "Word to PDF",
+    description: "Export Word documents to PDF with preserved typography and professional output.",
+    icon: FileText,
+    href: "/word-to-pdf",
+    category: "convert",
   },
 ];
 
-const stats = [
-  { label: "AI Requests", value: "10M+", icon: Bot },
-  { label: "Blockchain Secured", value: "100%", icon: Lock },
-  { label: "Processing Speed", value: "<2s", icon: Zap },
-  { label: "Security Rating", value: "5/5", icon: Shield },
-];
+const ToolCard = ({ tool }: { tool: any }) => (
+  <Link to={tool.href} onClick={(e) => tool.comingSoon && e.preventDefault()}>
+    <div className="relative h-full rounded-3xl group transition-transform duration-300 hover:-translate-y-2">
+      <GlowingEffect
+        spread={40}
+        glow
+        disabled={false}
+        proximity={72}
+        inactiveZone={0.05}
+        borderWidth={2}
+        variant="white"
+        className="pointer-events-none"
+      />
+      <div
+        className={`relative h-full rounded-3xl bg-white/5/0 backdrop-blur-2xl border border-white/10 p-6 md:p-8 shadow-[0_24px_60px_-30px_rgba(15,23,42,0.9)] text-left transition-colors duration-300 ${
+          tool.comingSoon ? "opacity-60 cursor-default" : ""
+        }`}
+      >
+        <div className="flex flex-col gap-4">
+          <div className="flex items-start justify-between gap-3">
+            <div
+              className="flex items-center justify-center mb-2"
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 14,
+                background: "rgba(255,255,255,0.05)",
+                border: "1px solid rgba(0,240,255,0.2)",
+                color: tool.comingSoon ? "rgba(148,163,184,0.7)" : "#00f0ff",
+              }}
+            >
+              <tool.icon className="w-7 h-7" strokeWidth={1.5} />
+            </div>
 
-const floatingVariants = {
-  animate: {
-    y: [-10, 10, -10],
-    rotate: [-1, 1, -1],
-    transition: {
-      y: {
-        duration: 4,
-        repeat: Infinity,
-        ease: "easeInOut",
-      },
-      rotate: {
-        duration: 6,
-        repeat: Infinity,
-        ease: "easeInOut",
-      },
-    },
-  },
-};
+            {tool.comingSoon ? (
+              <span className="text-[9px] font-semibold uppercase tracking-wider text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-full">
+                Coming Soon
+              </span>
+            ) : tool.isAI ? (
+              <span className="text-[9px] font-semibold uppercase tracking-wider text-violet-300 bg-violet-500/20 px-2 py-0.5 rounded-full">
+                AI
+              </span>
+            ) : null}
+          </div>
+
+          <div className="space-y-1">
+            <h3
+              className={`text-base font-semibold tracking-tight ${
+                tool.comingSoon ? "text-zinc-300" : "text-white"
+              }`}
+            >
+              {tool.title}
+            </h3>
+            <p className="text-sm text-zinc-300/80 leading-relaxed">
+              {tool.description}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Link>
+);
+
+const StepCard = ({ number, title, description, icon: Icon }: { number: string, title: string, description: string, icon: any }) => (
+  <div className="relative p-6 rounded-2xl bg-zinc-900/40 border border-zinc-800 backdrop-blur-sm group hover:bg-zinc-900/60 transition-colors">
+    <div className="absolute -top-4 -left-4 w-12 h-12 rounded-xl bg-zinc-900 border border-zinc-700 flex items-center justify-center text-xl font-bold text-white shadow-xl shadow-black/20 group-hover:scale-110 transition-transform">
+      {number}
+    </div>
+    <div className="mt-4 mb-4 text-zinc-200">
+      <Icon className="w-8 h-8" strokeWidth={1.5} />
+    </div>
+    <h3 className="text-xl font-bold text-white mb-2">{title}</h3>
+    <p className="text-zinc-400">{description}</p>
+  </div>
+);
 
 export default function Index() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start start", "end start"],
-  });
-
-  const y = useTransform(scrollYProgress, [0, 1], ["0%", "50%"]);
-  const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
-
-  const [hoveredTool, setHoveredTool] = useState<number | null>(null);
-  const [isAIChatOpen, setIsAIChatOpen] = useState(false);
+  const { isAuthenticated, user } = useAuth();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <div
-      ref={containerRef}
-      className="min-h-screen overflow-hidden bg-gray-900"
-    >
-      {/* Particle Background */}
-      <ParticleBackground />
+    <div className="hero-group relative min-h-screen bg-[#020408] font-sans selection:bg-white/20 overflow-hidden">
+      {/* Header - floating glass bar */}
+      <header className="fixed top-4 left-0 right-0 z-50 pointer-events-none relative">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="pointer-events-auto h-14 rounded-2xl bg-white/5 border border-white/15 backdrop-blur-xl shadow-[0_18px_45px_-24px_rgba(0,0,0,0.9)] flex items-center justify-between px-4 md:px-6">
+          <Link to="/" className="flex items-center gap-2 group">
+            <div className="p-1.5 rounded-lg bg-white/5 group-hover:bg-white/10 transition-colors">
+              <Zap className="w-5 h-5 text-white" fill="currentColor" />
+            </div>
+            <span className="font-heading text-lg font-bold text-white tracking-tight">
+              Thundocs
+            </span>
+          </Link>
 
-      {/* Blockchain Status */}
-      <BlockchainStatus />
+          <nav className="hidden md:flex items-center gap-8">
+            <a href="#tools" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
+              {t("Tools")}
+            </a>
+            <a href="#how-it-works" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
+              {t("How it works")}
+            </a>
+            <Link to="/blog" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
+              {t("Blog")}
+            </Link>
+            <Link to="/about" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
+              {t("About")}
+            </Link>
+          </nav>
 
-      {/* AI Full Screen Chat */}
-      <AIFullScreenChat
-        isOpen={isAIChatOpen}
-        onClose={() => setIsAIChatOpen(false)}
+          <div className="flex items-center gap-3">
+            {isAuthenticated && user ? (
+              <Link to="/profile">
+                <Button
+                  variant="outline"
+                  className="hidden md:flex border-zinc-800 bg-zinc-900 hover:bg-zinc-800 hover:text-white transition-all text-zinc-300 gap-2"
+                >
+                  <img src={user.picture} alt={user.name} className="w-5 h-5 rounded-full" />
+                  {user.name.split(' ')[0]}
+                </Button>
+              </Link>
+            ) : (
+              <Link to="/signin">
+                <Button
+                  variant="outline"
+                  className="hidden md:flex border-zinc-800 bg-zinc-900 hover:bg-zinc-800 hover:text-white transition-all text-zinc-300"
+                >
+                  <LogIn className="w-4 h-4 mr-2" />
+                  {t("Sign In")}
+                </Button>
+              </Link>
+            )}
+          </div>
+          </div>
+        </div>
+        <button
+          type="button"
+          className="pointer-events-auto absolute right-8 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-white hover:text-white/80"
+          onClick={() => setIsMenuOpen((v) => !v)}
+          aria-label="Open menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+      </header>
+      <RightSideMenu
+        isOpen={isMenuOpen}
+        onClose={() => setIsMenuOpen(false)}
+        topOffset={100}
+        showAuthEntry={false}
       />
 
-      {/* Animated Background */}
-      <div className="fixed inset-0 -z-10">
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-black to-gray-800" />
-        <div className="absolute inset-0 bg-gradient-to-tr from-blue-900/20 via-purple-900/20 to-cyan-900/20" />
+      {/* Ambient grid + liquid orb behind header + hero */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div
+          className="absolute inset-0 opacity-25"
+          style={{
+            backgroundImage: "radial-gradient(rgba(0,240,255,0.03) 1px, transparent 1px)",
+            backgroundSize: "40px 40px",
+          }}
+        />
+        <div
+          className="absolute -top-40 -left-16 w-[640px] h-[640px] rounded-full opacity-30 blur-[120px]"
+          style={{
+            background:
+              "radial-gradient(circle at 30% 30%, #00f0ff 0%, #0055ff 40%, transparent 70%)",
+          }}
+        />
       </div>
 
-      {/* Header */}
-      <motion.header className="relative z-10 px-4 py-6" style={{ y, opacity }}>
-        <nav className="mx-auto max-w-7xl flex items-center justify-between">
-          <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, type: "spring" }}
-            className="flex items-center space-x-2 group"
-          >
-            <motion.div
-              className="h-10 w-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center"
-              whileHover={{ scale: 1.1, rotate: 180 }}
-              transition={{ duration: 0.3 }}
+      {/* Hero Section - Thundocs liquid design */}
+      <section className="relative z-10 pt-32 md:pt-40 pb-24 px-6 min-h-[720px] flex items-center overflow-hidden">
+        {/* Hero lightning bolt */}
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute top-1/2 left-1/2 w-[900px] h-[900px] -translate-x-1/2 -translate-y-1/2 -rotate-[5deg]">
+            <svg
+              viewBox="0 0 512 512"
+              className="thunder-bolt-svg hero-bolt home-bolt w-full h-full"
             >
-              <FileText className="h-6 w-6 text-white" />
-            </motion.div>
-            <motion.span
-              className="text-2xl font-bold text-white"
-              whileHover={{ scale: 1.05 }}
-            >
-              PDFTools
-            </motion.span>
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-            >
-              <Sparkles className="h-5 w-5 text-yellow-300" />
-            </motion.div>
-          </motion.div>
+              <path d="M284 32L120 260h84l-40 220 180-248h-92l56-200z" fill="white" />
+            </svg>
+          </div>
+        </div>
 
+        <div className="relative z-10 max-w-6xl mx-auto text-center">
           <motion.div
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="hidden md:flex items-center space-x-6"
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
           >
-            <Link
-              to="/about"
-              className="text-gray-300 hover:text-white transition-all duration-300 hover:scale-105"
-            >
-              About
-            </Link>
-            <Link
-              to="/pricing"
-              className="text-gray-300 hover:text-white transition-all duration-300 hover:scale-105"
-            >
-              Pricing
-            </Link>
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button
-                variant="secondary"
-                size="sm"
-                className="bg-gray-800/80 backdrop-blur-sm border-gray-700 text-gray-200 hover:bg-gray-700/80 hover:text-white"
-              >
-                Sign In
-              </Button>
-            </motion.div>
-          </motion.div>
-        </nav>
-      </motion.header>
-
-      {/* Hero Section */}
-      <section className="relative px-4 pt-12">
-        <div className="mx-auto max-w-7xl text-center">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 1, type: "spring", bounce: 0.4 }}
-          >
-            <h1 className="text-6xl md:text-8xl font-bold text-white mb-8 leading-tight">
-              AI-Powered PDF
-              <span
-                className="block bg-gradient-to-r from-cyan-300 via-blue-300 to-indigo-300 bg-clip-text text-transparent animate-pulse"
-                style={{
-                  backgroundSize: "200% 200%",
-                }}
-              >
-                Revolution
+            {/* Heading */}
+            <h1 className="text-4xl md:text-[64px] lg:text-[96px] font-heading font-bold tracking-[-0.05em] text-white mb-6 leading-[0.95]">
+              Process assets with
+              <br />
+              <span className="mt-3 inline-block relative px-6">
+                {/* Liquid surface (matches .liquid-text-wrap::before) */}
+                <span
+                  className="absolute inset-0 -z-20 rounded-3xl border border-white/20 shadow-[inset_0_0_20px_rgba(255,255,255,0.1),0_20px_40px_rgba(0,0,0,0.4)]"
+                  style={{
+                    backgroundImage:
+                      "linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.02) 50%, rgba(255,255,255,0.05) 100%)",
+                    transform: "skewX(-5deg)",
+                  }}
+                />
+                {/* Highlight overlay (matches .liquid-text-wrap::after) */}
+                <span
+                  className="absolute inset-0 -z-10 rounded-3xl"
+                  style={{
+                    backgroundImage:
+                      "radial-gradient(circle at 20% 20%, rgba(255,255,255,0.4) 0%, transparent 40%)",
+                    transform: "skewX(-5deg)",
+                  }}
+                />
+                {/* Text */}
+                <span className="relative inline-block">
+                  liquid precision.
+                </span>
               </span>
             </h1>
-            <motion.p
-              className="text-2xl md:text-3xl text-gray-300 mb-12 max-w-4xl mx-auto font-light"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.5 }}
-            >
-              Just tell our AI what you want to do - merge, compress, convert,
-              or protect PDFs.
-              <span className="text-cyan-400">
-                Powered by blockchain security.
-              </span>
-            </motion.p>
-          </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.7 }}
-            className="flex flex-col sm:flex-row gap-6 justify-center mb-16"
-          >
-            <motion.div
-              whileHover={{ scale: 1.05, y: -5 }}
-              whileTap={{ scale: 0.95 }}
-            >
+            {/* Sub text */}
+            <p className="text-base md:text-lg text-zinc-300/80 mb-10 max-w-3xl mx-auto leading-relaxed">
+              A high-fidelity document matrix engineered for the next generation. Experience
+              zero-latency transformations with autonomous encryption layers.
+            </p>
+
+            {/* CTAs */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button
                 size="lg"
-                className="bg-gradient-to-r from-cyan-600 to-blue-600 text-white hover:from-cyan-500 hover:to-blue-500 shadow-lg hover:shadow-cyan-500/25 text-xl px-12 py-6 rounded-2xl transition-all duration-300"
-                onClick={() => setIsAIChatOpen(true)}
+                className="h-12 px-8 rounded-full bg-white text-black font-semibold text-sm shadow-[0_0_30px_rgba(255,255,255,0.25)] hover:shadow-[0_0_45px_rgba(0,240,255,0.45)] hover:scale-[1.03] transition-all"
+                onClick={() =>
+                  document.getElementById("tools")?.scrollIntoView({ behavior: "smooth" })
+                }
               >
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                >
-                  <Bot className="mr-3 h-6 w-6" />
-                </motion.div>
-                Chat with AI
+                Get Started
               </Button>
-            </motion.div>
-            <motion.div
-              whileHover={{ scale: 1.05, y: -5 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-2 border-cyan-500/50 text-white bg-cyan-500/10 hover:bg-cyan-500/20 hover:border-cyan-400 text-xl px-12 py-6 rounded-2xl backdrop-blur-sm transition-all duration-300"
-                onClick={() => {
-                  document.getElementById("tools-section")?.scrollIntoView({
-                    behavior: "smooth",
-                  });
-                }}
-              >
-                <Zap className="mr-3 h-6 w-6" />
-                View All Tools
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </motion.div>
-          </motion.div>
-
-          {/* Floating Tool Preview Cards */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 1, delay: 1 }}
-            className="relative max-w-6xl mx-auto perspective-1000"
-          >
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20">
-              {tools.slice(0, 3).map((tool, index) => (
-                <motion.div
-                  key={tool.title}
-                  initial={{ opacity: 0, y: 50, rotateX: 45 }}
-                  animate={{ opacity: 1, y: 0, rotateX: 0 }}
-                  transition={{
-                    duration: 0.8,
-                    delay: 1.2 + index * 0.2,
-                    type: "spring",
-                  }}
-                  variants={floatingVariants}
-                  animate="animate"
-                  whileHover={{
-                    scale: 1.05,
-                    y: -5,
-                  }}
-                  className="group perspective-1000"
+              <Link to="/about">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="h-12 px-8 rounded-full border border-white/30 bg-white/5 text-white text-sm backdrop-blur-md hover:bg-white/10 hover:border-white/60 transition-all"
                 >
-                  <Card className="bg-gray-800/40 backdrop-blur-md border border-gray-700/50 text-white hover:bg-gray-800/60 transition-all duration-500 transform-gpu shadow-2xl hover:shadow-blue-500/20">
-                    <CardHeader className="text-center relative">
-                      <motion.div
-                        className={`w-16 h-16 rounded-2xl bg-gradient-to-r ${tool.gradient} flex items-center justify-center mx-auto mb-6 shadow-lg`}
-                        whileHover={{
-                          scale: 1.2,
-                          rotate: 180,
-                        }}
-                        transition={{ duration: 0.6, type: "spring" }}
-                      >
-                        <tool.icon className="h-8 w-8 text-white" />
-                      </motion.div>
-                      <CardTitle className="text-white text-xl mb-2">
-                        {tool.title}
-                      </CardTitle>
-                      <CardDescription className="text-gray-300 text-base">
-                        {tool.description}
-                      </CardDescription>
-                    </CardHeader>
-                  </Card>
-                </motion.div>
-              ))}
+                  View Documentation
+                </Button>
+              </Link>
             </div>
           </motion.div>
         </div>
       </section>
 
-      {/* Elegant Transition Text */}
-      <div className="relative py-4">
-        <div className="mx-auto max-w-7xl px-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="text-center"
-          >
-            <div className="flex items-center justify-center space-x-4 mb-2">
-              <div className="h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent flex-1 max-w-24" />
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
-              >
-                <Sparkles className="h-4 w-4 text-cyan-400" />
-              </motion.div>
-              <div className="h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent flex-1 max-w-24" />
+      {/* Stats Section */}
+      <section className="py-12 border-y border-white/5 bg-white/[0.02]">
+        <div className="max-w-7xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-8">
+            {[
+            { label: "Files Processed", value: "1M+" },
+            { label: "Active Users", value: "50k+" },
+            { label: "Tools Available", value: "15+" },
+            { label: "Uptime", value: "99.9%" },
+          ].map((stat) => (
+            <div key={stat.label} className="text-center">
+              <div className="text-3xl md:text-4xl font-bold text-white mb-2 font-heading">{stat.value}</div>
+              <div className="text-sm text-zinc-500 uppercase tracking-wider font-medium">
+                {t(stat.label)}
+              </div>
             </div>
-
-            <motion.p
-              animate={{ opacity: [0.7, 1, 0.7] }}
-              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-              className="text-lg font-medium bg-gradient-to-r from-cyan-300 via-blue-300 to-purple-300 bg-clip-text text-transparent"
-            >
-              Trusted by professionals worldwide
-            </motion.p>
-
-            <motion.p
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              transition={{ duration: 1, delay: 0.3 }}
-              className="text-sm text-gray-400 mt-1"
-            >
-              AI-powered • Blockchain secured • Lightning fast
-            </motion.p>
-          </motion.div>
-        </div>
-      </div>
-
-      {/* Enhanced Stats Section */}
-      <section className="relative px-4 py-12">
-        <div className="mx-auto max-w-7xl">
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="grid grid-cols-2 md:grid-cols-4 gap-8"
-          >
-            {stats.map((stat, index) => (
-              <motion.div
-                key={stat.label}
-                initial={{ opacity: 0, scale: 0.5 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                transition={{
-                  duration: 0.8,
-                  delay: index * 0.1,
-                  type: "spring",
-                }}
-                whileHover={{
-                  scale: 1.1,
-                  y: -5,
-                }}
-                className="text-center group"
-              >
-                <motion.div
-                  className="bg-gray-800/50 backdrop-blur-md rounded-3xl p-8 border border-gray-700/50 shadow-xl group-hover:shadow-2xl transition-all duration-500"
-                  whileHover={{
-                    scale: 1.02,
-                  }}
-                >
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{
-                      duration: 10 + index * 2,
-                      repeat: Infinity,
-                      ease: "linear",
-                    }}
-                  >
-                    <stat.icon className="h-10 w-10 text-white mx-auto mb-4" />
-                  </motion.div>
-                  <motion.div
-                    className="text-4xl font-bold text-white mb-2"
-                    animate={{
-                      scale: [1, 1.05, 1],
-                    }}
-                    transition={{
-                      duration: 2,
-                      repeat: Infinity,
-                      delay: index * 0.5,
-                    }}
-                  >
-                    {stat.value}
-                  </motion.div>
-                  <div className="text-white/80 text-sm">{stat.label}</div>
-                </motion.div>
-              </motion.div>
-            ))}
-          </motion.div>
+          ))}
         </div>
       </section>
 
-      {/* Enhanced All Tools Section */}
-      <section id="tools-section" className="relative px-4 py-20">
-        <div className="mx-auto max-w-7xl">
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="text-center mb-20"
-          >
-            <h2 className="text-5xl md:text-6xl font-bold text-white mb-6">
-              AI + Blockchain PDF Tools
+      {/* Tools Section */}
+      <section id="tools" className="relative py-24 md:py-32 px-6 overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div className="w-[1100px] h-[1100px] -rotate-[7deg]">
+            <svg viewBox="0 0 512 512" className="thunder-bolt-svg tools-bolt w-full h-full">
+              <path d="M284 32L120 260h84l-40 220 180-248h-92l56-200z" fill="white" />
+            </svg>
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto relative z-10">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-5xl font-heading font-bold text-white mb-6">
+              {t("Empower Your Workflow")}
             </h2>
-            <motion.p
-              className="text-2xl text-white/80 max-w-3xl mx-auto font-light"
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              transition={{ duration: 1, delay: 0.3 }}
-            >
-              Simply chat with our AI assistant to handle any PDF task.
-              <span className="text-cyan-200">
-                Secured by blockchain technology.
-              </span>
-            </motion.p>
+            <p className="text-zinc-400 text-lg max-w-2xl mx-auto">
+              {t("Everything you need to manage your documents in one place.")}
+            </p>
+          </div>
 
-            {/* AI Features Showcase */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.6 }}
-              className="flex flex-wrap justify-center gap-4 mt-8"
-            >
-              {[
-                { icon: MessageCircle, text: "Natural Language Commands" },
-                { icon: Cpu, text: "Blockchain Security" },
-                { icon: Zap, text: "Instant Processing" },
-                { icon: Brain, text: "Smart AI Assistant" },
-              ].map((feature, index) => (
-                <motion.div
-                  key={feature.text}
-                  whileHover={{ scale: 1.05 }}
-                  className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 border border-white/20"
-                >
-                  <feature.icon className="h-4 w-4 text-cyan-300" />
-                  <span className="text-white/90 text-sm">{feature.text}</span>
-                </motion.div>
-              ))}
-            </motion.div>
-          </motion.div>
+          <Tabs defaultValue="all" className="w-full">
+            <div className="flex justify-center mb-12">
+              <TabsList className="bg-zinc-900/50 border border-zinc-800 p-1 rounded-full backdrop-blur-sm h-auto">
+                <TabsTrigger value="all" className="rounded-full px-6 py-2.5 data-[state=active]:bg-zinc-100 data-[state=active]:text-zinc-950 text-zinc-400 transition-all">
+                  {t("All Tools")}
+                </TabsTrigger>
+                <TabsTrigger value="ai" className="rounded-full px-6 py-2.5 data-[state=active]:bg-zinc-100 data-[state=active]:text-zinc-950 text-zinc-400 transition-all">
+                  {t("AI Power")}
+                </TabsTrigger>
+                <TabsTrigger value="essentials" className="rounded-full px-6 py-2.5 data-[state=active]:bg-zinc-100 data-[state=active]:text-zinc-950 text-zinc-400 transition-all">
+                  {t("PDF Essentials")}
+                </TabsTrigger>
+                <TabsTrigger value="convert" className="rounded-full px-6 py-2.5 data-[state=active]:bg-zinc-100 data-[state=active]:text-zinc-950 text-zinc-400 transition-all">
+                  {t("Converters")}
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {tools.map((tool, index) => (
-              <motion.div
-                key={tool.title}
-                initial={{ opacity: 0, y: 60, rotateX: 30 }}
-                whileInView={{ opacity: 1, y: 0, rotateX: 0 }}
-                transition={{
-                  duration: 0.8,
-                  delay: tool.delay,
-                  type: "spring",
-                }}
-                onHoverStart={() => setHoveredTool(index)}
-                onHoverEnd={() => setHoveredTool(null)}
-                whileHover={{
-                  scale: 1.03,
-                  y: -5,
-                }}
-                className="group perspective-1000"
-              >
-                <Link to={tool.href}>
-                  <Card className="bg-gray-800/40 backdrop-blur-md border border-gray-700/50 hover:bg-gray-800/60 transition-all duration-700 h-full transform-gpu shadow-xl hover:shadow-blue-500/20">
-                    <CardHeader className="relative overflow-hidden">
-                      {tool.isAI && (
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          className="absolute top-4 right-4 bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-xs px-2 py-1 rounded-full flex items-center space-x-1 z-10"
-                        >
-                          <Sparkles className="h-3 w-3" />
-                          <span>AI</span>
-                        </motion.div>
-                      )}
-                      <motion.div
-                        className={`w-16 h-16 rounded-2xl bg-gradient-to-r ${tool.gradient} flex items-center justify-center mb-6 shadow-lg`}
-                        animate={{
-                          rotate: hoveredTool === index ? 360 : 0,
-                          scale: hoveredTool === index ? 1.1 : 1,
-                        }}
-                        transition={{ duration: 0.8, type: "spring" }}
-                      >
-                        <tool.icon className="h-8 w-8 text-white" />
-                      </motion.div>
-                      <CardTitle className="text-white text-xl mb-3 group-hover:text-blue-400 transition-colors duration-300">
-                        {tool.title}
-                        {tool.isAI && (
-                          <motion.span
-                            animate={{ rotate: [0, 10, -10, 0] }}
-                            transition={{ duration: 2, repeat: Infinity, delay: index * 0.2 }}
-                            className="inline-block ml-2"
-                          >
-                            <Brain className="h-4 w-4 text-cyan-400" />
-                          </motion.span>
-                        )}
-                      </CardTitle>
-                      <CardDescription className="text-gray-300 text-base">
-                        {tool.description}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <motion.div
-                        whileHover={{ x: 10 }}
-                        transition={{ duration: 0.3 }}
-                      >
-                        <Button
-                          variant="ghost"
-                          className="w-full text-gray-200 hover:bg-gray-700/50 hover:text-white text-lg py-3 rounded-xl"
-                        >
-                          Launch Tool
-                          <motion.div
-                            animate={{ x: [0, 5, 0] }}
-                            transition={{
-                              duration: 1.5,
-                              repeat: Infinity,
-                              delay: index * 0.2,
-                            }}
-                          >
-                            <ArrowRight className="ml-2 h-5 w-5" />
-                          </motion.div>
-                        </Button>
-                      </motion.div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              </motion.div>
-            ))}
+            <TabsContent value="all" className="mt-0">
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
+                {tools.map((tool) => <ToolCard key={tool.title} tool={tool} />)}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="ai" className="mt-0">
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
+                {tools.filter(t => t.category === 'ai').map((tool) => <ToolCard key={tool.title} tool={tool} />)}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="essentials" className="mt-0">
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
+                {tools.filter(t => t.category === 'essentials').map((tool) => <ToolCard key={tool.title} tool={tool} />)}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="convert" className="mt-0">
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
+                {tools.filter(t => t.category === 'convert').map((tool) => <ToolCard key={tool.title} tool={tool} />)}
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </section>
+
+      {/* How It Works */}
+      <section id="how-it-works" className="py-24 bg-zinc-900/30 border-y border-white/5">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-5xl font-heading font-bold text-white mb-6">
+              {t("How It Works")}
+            </h2>
+            <p className="text-zinc-400 text-lg">
+              {t("Simple, secure, and streamlined process.")}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-5xl mx-auto">
+              <StepCard
+              number="01"
+              title={t("Upload Files")}
+              description={t("Drag and drop your files directly into our secure tool interface. We support all major formats.")}
+              icon={UploadCloud}
+            />
+              <StepCard
+              number="02"
+              title={t("Process")}
+              description={t("Our servers instantly process your documents. For AI tools, advanced models analyze your content.")}
+              icon={Wand2}
+            />
+              <StepCard
+              number="03"
+              title={t("Download")}
+              description={t("Get your converted files immediately. All files are automatically deleted from our servers after 1 hour.")}
+              icon={Download}
+            />
           </div>
         </div>
       </section>
 
-      {/* Mega CTA Section */}
-      <section className="relative px-4 py-24">
-        <div className="mx-auto max-w-5xl text-center">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 1, type: "spring" }}
-            className="relative"
-          >
-            <motion.div
-              className="bg-gradient-to-r from-gray-800/50 via-gray-800/70 to-gray-800/50 backdrop-blur-md rounded-3xl border border-gray-700/50 p-16 shadow-2xl"
-              whileHover={{
-                scale: 1.02,
-              }}
-              transition={{ duration: 0.5 }}
-            >
-              <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-                Experience the Future of PDF Processing
-              </h2>
-              <motion.p
-                className="text-2xl text-gray-300 mb-10 font-light"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.3 }}
-              >
-                Join the AI revolution. Simply chat with our assistant and watch
-                magic happen.
-              </motion.p>
-              <div className="flex flex-col sm:flex-row gap-6 justify-center">
-                <motion.div
-                  whileHover={{ scale: 1.05, rotate: 1 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <Button
-                    size="lg"
-                    className="bg-gradient-to-r from-cyan-600 to-blue-600 text-white hover:from-cyan-500 hover:to-blue-500 shadow-lg hover:shadow-cyan-500/25 text-xl px-16 py-8 rounded-2xl transition-all duration-300"
-                    onClick={() => setIsAIChatOpen(true)}
-                  >
-                    <Bot className="mr-3 h-6 w-6" />
-                    Start Chatting with AI
-                  </Button>
-                </motion.div>
-                <motion.div
-                  whileHover={{ scale: 1.05, rotate: -1 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="border-2 border-cyan-500/50 text-white bg-cyan-500/10 hover:bg-cyan-500/20 hover:border-cyan-400 text-xl px-16 py-8 rounded-2xl backdrop-blur-sm transition-all duration-300"
-                  >
-                    Learn About Blockchain
-                  </Button>
-                </motion.div>
-              </div>
-            </motion.div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Enhanced Footer */}
-      <footer className="relative px-4 py-16 border-t border-white/20">
-        <div className="mx-auto max-w-7xl">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="flex flex-col md:flex-row justify-between items-center"
-          >
-            <motion.div
-              className="flex items-center space-x-3 mb-6 md:mb-0"
-              whileHover={{ scale: 1.05 }}
-            >
-              <motion.div
-                className="h-10 w-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center"
-                animate={{ rotate: 360 }}
-                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-              >
-                <FileText className="h-6 w-6 text-white" />
-              </motion.div>
-              <span className="text-2xl font-bold text-white">PDFTools</span>
-            </motion.div>
-            <div className="flex items-center space-x-8 text-gray-400">
-              {["Privacy", "Terms", "Contact"].map((item, index) => (
-                <motion.div
-                  key={item}
-                  whileHover={{ scale: 1.1, color: "#ffffff" }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <Link
-                    to={`/${item.toLowerCase()}`}
-                    className="hover:text-white transition-colors"
-                  >
-                    {item}
-                  </Link>
-                </motion.div>
-              ))}
+      {/* Footer */}
+      <footer className="bg-zinc-950 border-t border-zinc-900 pt-24 pb-12 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+            <div className="col-span-1 md:col-span-2">
+              <Link to="/" className="flex items-center gap-2 mb-6">
+                <div className="p-1 rounded bg-white/10">
+                  <Zap className="w-4 h-4 text-white" fill="currentColor" />
+                </div>
+                <span className="font-heading text-xl font-bold text-white">
+                  Thundocs
+                </span>
+              </Link>
+              <p className="text-zinc-400 leading-relaxed max-w-xs mb-8">
+                {t("The ultimate document utility belt. Built for speed, designed for privacy, and free for everyone.")}
+              </p>
             </div>
-          </motion.div>
-          <motion.div
-            className="text-center mt-12 text-gray-500"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            transition={{ duration: 1, delay: 0.5 }}
-          >
-            <motion.p
-              animate={{ opacity: [0.5, 0.8, 0.5] }}
-              transition={{ duration: 3, repeat: Infinity }}
-            >
-              © 2024 PDFTools. Built for professionals.
-            </motion.p>
-          </motion.div>
+
+            <div>
+              <h4 className="font-bold text-white mb-6">{t("Tools")}</h4>
+              <ul className="space-y-4">
+                <li><Link to="/merge" className="text-zinc-400 hover:text-white transition-colors">{t("Merge PDF")}</Link></li>
+                <li><Link to="/compress" className="text-zinc-400 hover:text-white transition-colors">{t("Compress PDF")}</Link></li>
+                <li><Link to="/pdf-to-word" className="text-zinc-400 hover:text-white transition-colors">{t("PDF to Word")}</Link></li>
+                <li><Link to="#" onClick={(e) => e.preventDefault()} className="text-zinc-500 cursor-not-allowed flex items-center gap-2">AI Chat <span className="text-[10px] bg-zinc-800 text-white px-1.5 rounded">SOON</span></Link></li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="font-bold text-white mb-6">{t("Company")}</h4>
+              <ul className="space-y-4">
+                <li><Link to="/blog" className="text-zinc-400 hover:text-white transition-colors">{t("Blog")}</Link></li>
+                <li><Link to="/privacy" className="text-zinc-400 hover:text-white transition-colors">{t("Privacy Policy")}</Link></li>
+                <li><Link to="/terms" className="text-zinc-400 hover:text-white transition-colors">{t("Terms of Service")}</Link></li>
+                <li><Link to="/about" className="text-zinc-400 hover:text-white transition-colors">{t("About Us")}</Link></li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="pt-8 border-t border-zinc-900 flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-zinc-600 text-sm">
+              © {new Date().getFullYear()} Thundocs. All rights reserved.
+            </p>
+            <p className="text-zinc-600 text-sm flex items-center gap-1">
+              {t("Made with ♥ for productivity")}
+            </p>
+          </div>
         </div>
       </footer>
     </div>
