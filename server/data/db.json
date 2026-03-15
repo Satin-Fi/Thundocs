@@ -1,0 +1,164 @@
+{
+  "accounts": [
+    {
+      "id": "acc_test_123",
+      "name": "Thundocs Test Biz",
+      "tier": "business",
+      "monthlyLimit": 1000
+    }
+  ],
+  "keys": [
+    {
+      "hashedKey": "f206b3c2c0b1bef56dc0a4facc5b7f7f1d00645996ccb781d1d59da5ba244bcf",
+      "accountId": "acc_test_123",
+      "createdAt": "2026-02-21T21:35:55.468Z"
+    }
+  ],
+  "usage": {},
+  "ocrEvents": [
+    {
+      "engine": "tesseract",
+      "fileType": "image",
+      "pagesProcessed": 1,
+      "durationMs": 923,
+      "success": true,
+      "id": "cd6430c5-bc7d-49a8-a17c-b75b1fac6b67",
+      "timestamp": "2026-03-14T18:41:02.480Z"
+    },
+    {
+      "engine": "tesseract",
+      "fileType": "image",
+      "pagesProcessed": 1,
+      "durationMs": 890,
+      "success": true,
+      "id": "6273c83e-a9b2-40f2-9a21-eca7c545c7d8",
+      "timestamp": "2026-03-14T10:45:07.743Z"
+    },
+    {
+      "engine": "tesseract",
+      "fileType": "image",
+      "pagesProcessed": 1,
+      "durationMs": 1459,
+      "success": true,
+      "id": "d2338727-075e-4df3-a8b5-ab4751b6013a",
+      "timestamp": "2026-03-14T10:21:37.740Z"
+    },
+    {
+      "engine": "tesseract",
+      "fileType": "image",
+      "pagesProcessed": 1,
+      "durationMs": 1984,
+      "success": true,
+      "id": "32914e35-a09f-4cb5-9dc7-f271c6af169d",
+      "timestamp": "2026-03-08T19:37:27.167Z"
+    },
+    {
+      "engine": "tesseract",
+      "fileType": "pdf",
+      "pagesProcessed": 1,
+      "durationMs": 4977,
+      "success": true,
+      "id": "0de22207-7e3b-4554-b01b-003a53fb9294",
+      "timestamp": "2026-03-04T14:40:28.051Z"
+    },
+    {
+      "engine": "tesseract",
+      "fileType": "pdf",
+      "pagesProcessed": 3,
+      "durationMs": 22752,
+      "success": true,
+      "id": "2ad457d1-b851-4a60-b0e7-7d690b1d9316",
+      "timestamp": "2026-03-01T18:55:17.064Z"
+    },
+    {
+      "engine": "gemini",
+      "fileType": "image",
+      "pagesProcessed": 1,
+      "durationMs": 3795,
+      "success": true,
+      "id": "9cd39cc1-3f32-47e5-98cf-a4b3c1a9a2e4",
+      "timestamp": "2026-02-28T17:12:03.258Z"
+    },
+    {
+      "engine": "gemini",
+      "fileType": "pdf",
+      "pagesProcessed": 1,
+      "durationMs": 19658,
+      "success": true,
+      "id": "e0247452-da35-47a2-a728-09a5d2ee4151",
+      "timestamp": "2026-02-27T18:14:18.650Z"
+    },
+    {
+      "engine": "tesseract",
+      "fileType": "pdf",
+      "pagesProcessed": 1,
+      "durationMs": 6859,
+      "success": true,
+      "id": "bf4930aa-ff20-41d9-ac1b-17e4102d7a96",
+      "timestamp": "2026-02-27T18:13:27.786Z"
+    },
+    {
+      "engine": "gemini",
+      "fileType": "pdf",
+      "pagesProcessed": 2,
+      "durationMs": 19965,
+      "success": true,
+      "id": "e885d386-69be-463f-998f-e00c81345f4d",
+      "timestamp": "2026-02-27T17:57:05.036Z"
+    },
+    {
+      "engine": "gemini",
+      "fileType": "pdf",
+      "pagesProcessed": 2,
+      "durationMs": 45001,
+      "success": true,
+      "id": "d53af522-694e-4c43-a4b1-4b8392322828",
+      "timestamp": "2026-02-27T17:49:24.894Z"
+    },
+    {
+      "engine": "gemini",
+      "fileType": "pdf",
+      "pagesProcessed": 2,
+      "durationMs": 28569,
+      "success": true,
+      "id": "189817e8-040b-47fb-9261-5c0f8c838136",
+      "timestamp": "2026-02-27T17:42:38.664Z"
+    },
+    {
+      "engine": "gemini",
+      "fileType": "pdf",
+      "pagesProcessed": 2,
+      "durationMs": 19579,
+      "success": true,
+      "id": "c6b4ce1f-0c72-4c53-acd2-674f7f9dc287",
+      "timestamp": "2026-02-27T17:33:52.438Z"
+    },
+    {
+      "engine": "gemini",
+      "fileType": "pdf",
+      "pagesProcessed": 2,
+      "durationMs": 25214,
+      "success": true,
+      "id": "142dc3bd-700b-4637-9d0b-b1745b4f4ab6",
+      "timestamp": "2026-02-27T17:26:56.131Z"
+    },
+    {
+      "engine": "gemini",
+      "fileType": "pdf",
+      "pagesProcessed": 2,
+      "durationMs": 25851,
+      "success": true,
+      "id": "bdb138ac-dd59-4d17-a39e-7d97e7ef64be",
+      "timestamp": "2026-02-27T17:21:46.055Z"
+    },
+    {
+      "engine": "tesseract",
+      "fileType": "pdf",
+      "pagesProcessed": 2,
+      "durationMs": 57720,
+      "success": true,
+      "id": "d8a33617-5fa9-419f-a17b-7b9b344c7ca3",
+      "timestamp": "2026-02-27T17:11:42.970Z"
+    }
+  ]
+}

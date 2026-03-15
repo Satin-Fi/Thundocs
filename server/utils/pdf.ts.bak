@@ -1,0 +1,45 @@
+const outputPath = path.join(tmpDir, `ph-unlock-out-${ts}.pdf`);
+
+fs.writeFileSync(inputPath, new Uint8Array(pdfBytes));
+const gsBin = process.platform === "win32" ? "gswin64c" : "gs";
+
+// Decrypting simply involves telling Ghostscript the password and saving
+// back to disk using pdfwrite without any encryption flags.
+const args = [
+    "-sDEVICE=pdfwrite",
+    "-dCompatibilityLevel=1.7",
+    "-dNOPAUSE", "-dQUIET", "-dBATCH",
+    "-dDetectDuplicateImages=true", "-dCompressFonts=true",
+    password ? `-sPDFPassword=${password}` : "",
+    `-sOutputFile=${outputPath}`,
+    "-c", ".setpdfwrite", "-f",
+    inputPath
+].filter(Boolean);
+
+try {
+    await new Promise<void>((resolve, reject) => {
+        const proc = spawn(gsBin, args);
+        let stderr = "";
+        proc.stderr.on("data", (data) => { stderr += data.toString(); });
+        proc.on("close", (code) => {
+            if (code === 0) resolve();
+            else {
+                if (stderr.includes("Password") || stderr.includes("Unable to open")) {
+                    reject(new Error("Invalid password or corrupted file"));
+                } else {
+                    reject(new Error(`GS Unlock Error ${code}`));
+                }
+            }
+        });
+    });
+    const out = fs.readFileSync(outputPath);
+    // Basic sanity check: avoid returning empty/blank outputs
+    if (out.length < 512) {
+        throw new Error("Unlocked output appears empty");
+    }
+    return out;
+} finally {
+    try { if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath); } catch { }
+    try { if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath); } catch { }
+}
+}
