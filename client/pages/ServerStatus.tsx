@@ -120,7 +120,7 @@ export default function ServerStatusPage() {
 
       <div
         className={cn(
-          "relative z-10 min-h-screen font-sans transition-colors duration-300 text-slate-900"
+          "relative z-10 min-h-screen font-sans transition-colors duration-300 text-white"
         )}
       >
         <ToolNavbar />
@@ -131,7 +131,7 @@ export default function ServerStatusPage() {
               <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-cyan-400">
                 Server Status
               </h1>
-              <p className="text-sm md:text-base max-w-2xl mx-auto text-slate-600">
+              <p className="text-sm md:text-base max-w-2xl mx-auto text-white/70">
                 Monitor the health of local services used by Thundocs tools.
               </p>
             </div>
@@ -140,8 +140,8 @@ export default function ServerStatusPage() {
               <CardContent className="p-5 space-y-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="font-semibold text-slate-900">OCR Engine</p>
-                    <p className="text-xs text-slate-600">
+                    <p className="font-semibold text-white">OCR Engine</p>
+                    <p className="text-xs text-white/70">
                       Set the default OCR engine for AI OCR.
                     </p>
                   </div>
@@ -238,8 +238,8 @@ export default function ServerStatusPage() {
                               />
                             </div>
                             <div>
-                              <p className="font-semibold text-slate-900">{srv.name}</p>
-                              <p className="text-xs text-slate-600">{srv.description}</p>
+                            <p className="font-semibold text-white">{srv.name}</p>
+                            <p className="text-xs text-white/70">{srv.description}</p>
                             </div>
                           </div>
 
