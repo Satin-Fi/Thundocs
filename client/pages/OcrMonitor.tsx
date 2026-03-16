@@ -191,7 +191,10 @@ export default function OcrMonitor() {
     };
 
     return (
-        <div className={`min-h-screen ai-ocr-bg ${themeStyles.text} font-sans`}>
+        <div className={`relative min-h-screen ai-ocr-bg ${themeStyles.text} font-sans overflow-hidden`}>
+            <div className="pointer-events-none fixed inset-0 flex items-center justify-center opacity-[0.05]">
+                <img src="/thundocs-icon.svg" alt="" className="w-80 h-80 drop-shadow-[0_0_48px_rgba(255,255,255,0.25)]" />
+            </div>
             <ToolNavbar />
 
             <div className="container mx-auto px-4 py-10 max-w-6xl">

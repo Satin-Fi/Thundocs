@@ -152,10 +152,12 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-[#060b14] font-sans text-white antialiased">
-      {/* Ambient glow */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-[120px]" />
         <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-cyan-600/8 rounded-full blur-[100px]" />
+        <div className="absolute inset-0 flex items-center justify-center opacity-[0.05]">
+          <img src="/thundocs-icon.svg" alt="" className="w-80 h-80 drop-shadow-[0_0_48px_rgba(255,255,255,0.25)]" />
+        </div>
       </div>
 
       <div className="relative max-w-6xl mx-auto px-4 py-8 space-y-8">

@@ -97,9 +97,12 @@ export default function ServerStatusPage() {
   return (
     <div
       className={cn(
-        "min-h-screen ai-ocr-bg font-sans transition-colors duration-300 text-slate-900"
+        "relative min-h-screen ai-ocr-bg font-sans transition-colors duration-300 text-slate-900 overflow-hidden"
       )}
     >
+      <div className="pointer-events-none fixed inset-0 flex items-center justify-center opacity-[0.05]">
+        <img src="/thundocs-icon.svg" alt="" className="w-80 h-80 drop-shadow-[0_0_48px_rgba(15,23,42,0.4)]" />
+      </div>
       <ToolNavbar />
 
       <div className="container mx-auto px-4 py-8 md:py-16 flex flex-col items-center justify-center min-h-[90vh]">

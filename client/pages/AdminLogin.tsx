@@ -32,13 +32,15 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-950 font-sans">
+    <div className="relative min-h-screen flex items-center justify-center bg-zinc-950 font-sans overflow-hidden">
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-[0.06]">
+        <img src="/thundocs-icon.svg" alt="" className="w-64 h-64 drop-shadow-[0_0_40px_rgba(255,255,255,0.25)]" />
+      </div>
       <form
         onSubmit={handleSubmit}
-        className={`w-full max-w-sm rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-8 shadow-2xl space-y-5`}
+        className={`relative z-10 w-full max-w-sm rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-8 shadow-2xl space-y-5`}
         style={shake ? { animation: "shake 0.4s ease" } : {}}
       >
-        {/* Icon */}
         <div className="flex flex-col items-center gap-3">
           <div className="w-14 h-14 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
             <Lock className="w-7 h-7 text-white/50" />
