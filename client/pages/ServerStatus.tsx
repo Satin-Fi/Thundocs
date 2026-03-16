@@ -18,10 +18,9 @@ import {
 } from "lucide-react";
 
 type StatusState = "checking" | "online" | "offline";
-type OcrEngine = "native" | "gemini" | "tesseract";
+type OcrEngine = "native" | "tesseract";
 
 const ENGINE_STORAGE_KEY = "Thundocs_ocr_engine";
-const GEMINI_KEY_STORAGE = "Thundocs_gemini_api_key";
 
 interface ServerInfo {
   id: string;
@@ -51,10 +50,10 @@ export default function ServerStatusPage() {
   );
   const [engine, setEngine] = useState<OcrEngine>(() => {
     const saved = localStorage.getItem(ENGINE_STORAGE_KEY);
-    if (saved === "native" || saved === "gemini" || saved === "tesseract") {
+    if (saved === "native" || saved === "tesseract") {
       return saved;
     }
-    return localStorage.getItem(GEMINI_KEY_STORAGE) ? "gemini" : "tesseract";
+    return "tesseract";
   });
 
   useEffect(() => {

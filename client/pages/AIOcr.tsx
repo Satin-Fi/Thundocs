@@ -2,14 +2,12 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 import * as pdfjsLib from "pdfjs-dist";
 import JSZip from "jszip";
 import { createWorker } from "tesseract.js";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { useDropzone } from "react-dropzone";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Input } from "@/components/ui/input";
 import ReactMarkdown from "react-markdown";
 import ToolNavbar from "@/components/ToolNavbar";
 import {
@@ -27,14 +25,12 @@ import {
   Copy,
   ScanText,
   AlertCircle,
-  CheckCircle2,
   X,
   Loader2,
   ImageIcon,
   FileText,
   File,
-  Key,
-  ExternalLink,
+  CheckCircle2,
   Undo,
   Redo,
   ChevronDown,
@@ -46,7 +42,7 @@ import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 // ── Types ──────────────────────────────────────────────────────────────────
-type OcrEngine = "gemini" | "tesseract" | "native";
+type OcrEngine = "tesseract" | "native";
 
 interface ExtractedResult {
   content: string;
@@ -59,7 +55,6 @@ interface ExtractedResult {
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────
-const GEMINI_KEY_STORAGE = "Thundocs_gemini_api_key";
 const ENGINE_STORAGE_KEY = "Thundocs_ocr_engine";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -352,15 +347,11 @@ export default function AIOcr() {
   // Engine
   const [engine, setEngine] = useState<OcrEngine>(() => {
     const saved = localStorage.getItem(ENGINE_STORAGE_KEY);
-    if (saved === "native" || saved === "gemini" || saved === "tesseract") {
+    if (saved === "native" || saved === "tesseract") {
       return saved;
     }
-    return localStorage.getItem(GEMINI_KEY_STORAGE) ? "gemini" : "tesseract";
+    return "tesseract";
   });
-  const [apiKey, setApiKey] = useState(
-    () => localStorage.getItem(GEMINI_KEY_STORAGE) || ""
-  );
-  const [showApiKeyInput, setShowApiKeyInput] = useState(false);
 
   useEffect(() => {
     localStorage.setItem(ENGINE_STORAGE_KEY, engine);
@@ -415,81 +406,6 @@ export default function AIOcr() {
     },
     multiple: false,
   });
-
-  // ── Gemini Vision OCR ─────────────────────────────────────────────────
-  const ocrWithGemini = async (targetFile: File): Promise<ExtractedResult> => {
-    const key = apiKey.trim();
-    if (!key) throw new Error("Please enter your Gemini API key first.");
-
-    const genAI = new GoogleGenerativeAI(key);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
-    const prompt =
-      `Extract ALL text from this image exactly as written. Preserve the original layout and formatting using Markdown:
-- Use # ## ### for headings based on their visual size/weight (headings will display centered automatically)
-- Use **bold** and *italic* for styled text
-- Use - or * for bullet lists, and 1. 2. 3. for numbered lists
-- Use > for quoted/indented blocks
-- Preserve paragraph breaks with a blank line between paragraphs
-- Keep tables using markdown table syntax if present
-Return ONLY the formatted markdown — no explanations, no commentary, no HTML tags.`;
-
-    if (targetFile.type === "application/pdf") {
-      const arrayBuffer = await targetFile.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      const totalPages = pdf.numPages;
-      const allText: string[] = [];
-
-      for (let i = 1; i <= totalPages; i++) {
-        if (abortRef.current) throw new Error("Cancelled");
-        setProgressText(`Analyzing — page ${i} of ${totalPages}`);
-        setProgress(Math.round(((i - 1) / totalPages) * 100));
-
-        const canvas = await renderPdfPageToCanvas(pdf, i);
-        const base64 = canvas.toDataURL("image/png").split(",")[1];
-
-        const res = await model.generateContent([
-          prompt,
-          { inlineData: { mimeType: "image/png", data: base64 } },
-        ]);
-
-        allText.push(res.response.text());
-      }
-
-      setProgress(100);
-      const fullText = allText.join("\n\n");
-      const words = fullText.trim().split(/\s+/).filter(Boolean);
-      return {
-        content: fullText,
-        wordCount: words.length,
-        confidence: 97,
-        engine: "gemini",
-        pagesProcessed: totalPages,
-        pages: allText,
-        isMarkdown: true,
-      };
-    } else {
-      setProgressText("Analyzing image...");
-      setProgress(30);
-
-      const base64 = await fileToBase64(targetFile);
-      const res = await model.generateContent([
-        prompt,
-        { inlineData: { mimeType: targetFile.type, data: base64 } },
-      ]);
-
-      setProgress(100);
-      const text = res.response.text();
-      const words = text.trim().split(/\s+/).filter(Boolean);
-      return {
-        content: text,
-        wordCount: words.length,
-        confidence: 97,
-        engine: "gemini",
-        isMarkdown: true,
-      };
-    }
-  };
 
   // ── Native PDF Extraction ───────────────────────────────────────────────
   const extractNativePdfText = async (targetFile: File): Promise<ExtractedResult> => {
@@ -589,12 +505,6 @@ Return ONLY the formatted markdown — no explanations, no commentary, no HTML t
   const handleExtract = async () => {
     if (!file) return;
 
-    if (engine === "gemini" && !apiKey.trim()) {
-      setShowApiKeyInput(true);
-      setError("Please enter your free Gemini API key to use Google Vision OCR.");
-      return;
-    }
-
     if (engine === "native" && file.type !== "application/pdf") {
       setError("Native text extraction only works on PDF files, not images.");
       return;
@@ -610,9 +520,7 @@ Return ONLY the formatted markdown — no explanations, no commentary, no HTML t
     let ocrResult: typeof result = null;
     try {
       let res: ExtractedResult;
-      if (engine === "gemini") {
-        res = await ocrWithGemini(file);
-      } else if (engine === "native") {
+      if (engine === "native") {
         res = await extractNativePdfText(file);
       } else {
         res = await ocrWithTesseract(file);
@@ -622,18 +530,7 @@ Return ONLY the formatted markdown — no explanations, no commentary, no HTML t
     } catch (err: any) {
       if (err.message !== "Cancelled") {
         const msg = String(err?.message ?? "");
-        if (msg.includes("API_KEY_INVALID") || msg.includes("API key")) {
-          setError(
-            "Invalid Gemini API key. Get a free key at aistudio.google.com/apikey"
-          );
-          setShowApiKeyInput(true);
-        } else if (msg.includes("429") || msg.includes("RESOURCE_EXHAUSTED")) {
-          setError(
-            "Rate limit reached. Gemini free tier allows 15 requests/min — wait a moment and retry."
-          );
-        } else {
-          setError(msg || "OCR failed. Please try again.");
-        }
+        setError(msg || "OCR failed. Please try again.");
       }
     } finally {
       setIsProcessing(false);
@@ -652,16 +549,6 @@ Return ONLY the formatted markdown — no explanations, no commentary, no HTML t
           errorMessage: ocrResult ? undefined : "extraction failed",
         }),
       }).catch(() => {/* silently ignore telemetry failures */ });
-    }
-  };
-
-  // ── API key persistence ───────────────────────────────────────────────
-  const saveApiKey = (key: string) => {
-    setApiKey(key);
-    if (key.trim()) {
-      localStorage.setItem(GEMINI_KEY_STORAGE, key.trim());
-    } else {
-      localStorage.removeItem(GEMINI_KEY_STORAGE);
     }
   };
 
@@ -737,76 +624,6 @@ Return ONLY the formatted markdown — no explanations, no commentary, no HTML t
               Extract text from images &amp; PDFs — precise, fast, and 100% free.
             </p>
           </div>
-
-          {/* ── Gemini API Key Banner ────────────────────────────────── */}
-          <AnimatePresence>
-            {engine === "gemini" && (showApiKeyInput || !apiKey.trim()) && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className={cn(
-                  "p-4 rounded-xl border",
-                  isNight
-                    ? "bg-amber-500/5 border-amber-500/20"
-                    : "bg-amber-50 border-amber-200"
-                )}
-              >
-                <div className="flex items-start gap-3 mb-3">
-                  <Key className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                  <div>
-                    <p
-                      className={cn(
-                        "font-semibold text-sm",
-                        themeStyles.text
-                      )}
-                    >
-                      AI Vision API Key Required
-                    </p>
-                    <p
-                      className={cn(
-                        "text-xs mt-0.5",
-                        themeStyles.subtext
-                      )}
-                    >
-                      Get your free key from{" "}
-                      <a
-                        href="https://aistudio.google.com/apikey"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-amber-500 underline hover:text-amber-400 inline-flex items-center gap-1"
-                      >
-                        aistudio.google.com
-                        <ExternalLink className="w-3 h-3" />
-                      </a>{" "}
-                      — no credit card needed, 15 requests/min free.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Input
-                    type="password"
-                    value={apiKey}
-                    onChange={(e) => saveApiKey(e.target.value)}
-                    placeholder="Paste your Gemini API key here..."
-                    className={cn(
-                      "flex-1 text-sm border-0 border-transparent outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0",
-                      themeStyles.inputBg
-                    )}
-                  />
-                  {apiKey.trim() && (
-                    <Button
-                      size="sm"
-                      onClick={() => setShowApiKeyInput(false)}
-                      className="bg-amber-600 hover:bg-amber-700 text-white"
-                    >
-                      <CheckCircle2 className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
 
           {/* ── Dropzone / Two-Page View ──────────────────────────────── */}
           {isProcessing ? (

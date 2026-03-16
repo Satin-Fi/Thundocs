@@ -136,22 +136,20 @@ function DonutRing({ gemini, tesseract, total }: { gemini: number; tesseract: nu
 }
 
 // ── Main Component ─────────────────────────────────────────────────────────
-const GEMINI_KEY_STORAGE = "Thundocs_gemini_api_key";
 
 export default function OcrMonitor() {
     const { themeStyles } = useTheme();
     const [stats, setStats] = useState<OcrStats | null>(null);
     const [loading, setLoading] = useState(true);
     const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
-    const [localEngine, setLocalEngine] = useState<"gemini" | "tesseract">("tesseract");
+    const [localEngine, setLocalEngine] = useState<"native" | "tesseract">("tesseract");
 
     useEffect(() => {
-        const lastUsed = localStorage.getItem("Thundocs_last_engine") as "gemini" | "tesseract" | null;
-        if (lastUsed) {
+        const lastUsed = localStorage.getItem("Thundocs_last_engine") as "native" | "tesseract" | null;
+        if (lastUsed === "native" || lastUsed === "tesseract") {
             setLocalEngine(lastUsed);
         } else {
-            const hasKey = !!localStorage.getItem(GEMINI_KEY_STORAGE);
-            setLocalEngine(hasKey ? "gemini" : "tesseract");
+            setLocalEngine("tesseract");
         }
     }, []);
 
