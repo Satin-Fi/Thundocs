@@ -42,7 +42,7 @@ import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 // ── Types ──────────────────────────────────────────────────────────────────
-type OcrEngine = "tesseract" | "native";
+type OcrEngine = "tesseract" | "native" | "gemini";
 
 interface ExtractedResult {
   content: string;
@@ -518,13 +518,55 @@ export default function AIOcr() {
     const startTime = Date.now();
 
     let ocrResult: typeof result = null;
+    let usedEngine: OcrEngine = engine;
+
     try {
-      let res: ExtractedResult;
-      if (engine === "native") {
-        res = await extractNativePdfText(file);
-      } else {
-        res = await ocrWithTesseract(file);
+      let res: ExtractedResult | null = null;
+
+      // First, try server-side Gemini if available; fall back silently on error
+      try {
+        setProgressText("Analyzing with AI Vision (server)...");
+        const formData = new FormData();
+        formData.append("file", file);
+        const resp = await fetch("/api/v1/ai-ocr", {
+          method: "POST",
+          body: formData,
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          res = {
+            content: data.content,
+            wordCount:
+              typeof data.wordCount === "number"
+                ? data.wordCount
+                : (data.content || "").trim().split(/\s+/).filter(Boolean).length,
+            confidence: typeof data.confidence === "number" ? data.confidence : 97,
+            engine: "gemini",
+            pagesProcessed: data.pagesProcessed ?? 1,
+            pages: Array.isArray(data.pages) ? data.pages : undefined,
+            isMarkdown: data.isMarkdown ?? true,
+          };
+          usedEngine = "gemini";
+        } else {
+          // Reset progress text on failure; we'll fall back below
+          setProgressText("");
+        }
+      } catch {
+        // Ignore server errors and fall back to local OCR
+        setProgressText("");
       }
+
+      // Fallback to local engines if Gemini was not used
+      if (!res) {
+        if (engine === "native") {
+          res = await extractNativePdfText(file);
+          usedEngine = "native";
+        } else {
+          res = await ocrWithTesseract(file);
+          usedEngine = "tesseract";
+        }
+      }
+
       setResult(res);
       ocrResult = res;
     } catch (err: any) {
@@ -536,12 +578,12 @@ export default function AIOcr() {
       setIsProcessing(false);
       // Fire-and-forget telemetry — never blocks or breaks the UX
       // Persist the actually-used engine so the monitor can read it
-      localStorage.setItem("Thundocs_last_engine", engine);
+      localStorage.setItem("Thundocs_last_engine", usedEngine);
       fetch("/api/v1/ocr-log", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          engine,
+          engine: usedEngine,
           fileType: file.type === "application/pdf" ? "pdf" : "image",
           pagesProcessed: ocrResult?.pagesProcessed ?? 1,
           durationMs: Date.now() - startTime,

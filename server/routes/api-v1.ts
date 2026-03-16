@@ -2,8 +2,14 @@ import { Router, Request, Response, NextFunction } from "express";
 import { Database } from "../db";
 import { compressPdf, protectPdf } from "../utils/pdf";
 import express from "express";
+import multer from "multer";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const router = Router();
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 25 * 1024 * 1024 }, // 25MB
+});
 
 // Middleware to authenticates the v1 Commercial API Key
 async function authenticateV1(req: Request, res: Response, next: NextFunction) {
@@ -138,6 +144,84 @@ router.get("/ocr-stats", (_req, res) => {
         res.json(stats);
     } catch (err: any) {
         res.status(500).json({ error: err.message });
+    }
+});
+
+// Server-side AI OCR using Gemini Vision and GEMINI_API_KEY
+router.post("/ai-ocr", upload.single("file"), async (req: Request, res: Response) => {
+    try {
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) {
+            return res.status(500).json({
+                error: "GEMINI_API_KEY is not configured on the server",
+            });
+        }
+
+        const file = req.file;
+        if (!file) {
+            return res.status(400).json({ error: "No file uploaded. Use field name 'file'." });
+        }
+
+        const mimeType = file.mimetype;
+        if (!mimeType.startsWith("image/") && mimeType !== "application/pdf") {
+            return res.status(400).json({
+                error: "Unsupported file type",
+                message: "Only images and PDFs are supported for AI OCR.",
+            });
+        }
+
+        const base64 = file.buffer.toString("base64");
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+        const prompt =
+            `Extract ALL text from this document exactly as written. Preserve the original layout and semantics using Markdown:\n` +
+            `- Use # ## ### for headings based on their visual size/weight (headings will display centered automatically)\n` +
+            `- Use **bold** and *italic* for styled text\n` +
+            `- Use - or * for bullet lists, and 1. 2. 3. for numbered lists\n` +
+            `- Use > for quoted/indented blocks\n` +
+            `- Preserve paragraph breaks with a blank line between paragraphs\n` +
+            `- Keep tables using markdown table syntax if present\n` +
+            `Return ONLY the formatted markdown — no explanations, no commentary, no HTML tags.`;
+
+        const start = Date.now();
+        const result = await model.generateContent([
+            prompt,
+            { inlineData: { mimeType, data: base64 } },
+        ]);
+
+        const text = result.response.text();
+        const words = text.trim().length > 0
+            ? text.trim().split(/\s+/).filter(Boolean)
+            : [];
+
+        const durationMs = Date.now() - start;
+        const fileType: "pdf" | "image" =
+            mimeType === "application/pdf" ? "pdf" : "image";
+
+        // Log telemetry on the server
+        Database.logOcrEvent({
+            engine: "gemini",
+            fileType,
+            pagesProcessed: 1,
+            durationMs,
+            success: true,
+        });
+
+        res.json({
+            content: text,
+            wordCount: words.length,
+            confidence: 97,
+            engine: "gemini",
+            pagesProcessed: 1,
+            isMarkdown: true,
+        });
+    } catch (err: any) {
+        console.error("AI OCR (Gemini) Error:", err);
+        res.status(500).json({
+            error: "Gemini OCR failed",
+            message: err?.message || "Unknown error",
+        });
     }
 });
 
