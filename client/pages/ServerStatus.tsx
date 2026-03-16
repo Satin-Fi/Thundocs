@@ -95,17 +95,39 @@ export default function ServerStatusPage() {
   }, []);
 
   return (
-    <div
-      className={cn(
-        "relative min-h-screen ai-ocr-bg font-sans transition-colors duration-300 text-slate-900 overflow-hidden"
-      )}
-    >
-      <div className="pointer-events-none fixed inset-0 flex items-center justify-center opacity-[0.05]">
-        <img src="/thundocs-icon.svg" alt="" className="w-80 h-80 drop-shadow-[0_0_48px_rgba(15,23,42,0.4)]" />
+    <div className="hero-group relative min-h-screen bg-[#020408] font-sans">
+      <div className="absolute inset-0 pointer-events-none">
+        <div
+          className="absolute inset-0 opacity-25"
+          style={{
+            backgroundImage: "radial-gradient(rgba(0,240,255,0.03) 1px, transparent 1px)",
+            backgroundSize: "40px 40px",
+          }}
+        />
+        <div
+          className="absolute -top-40 -left-16 w-[640px] h-[640px] rounded-full opacity-30 blur-[120px]"
+          style={{
+            background:
+              "radial-gradient(circle at 30% 30%, #00f0ff 0%, #0055ff 40%, transparent 70%)",
+          }}
+        />
+        <div className="absolute top-1/2 left-1/2 w-[900px] h-[900px] -translate-x-1/2 -translate-y-1/2 -rotate-[5deg]">
+          <svg
+            viewBox="0 0 512 512"
+            className="thunder-bolt-svg hero-bolt w-full h-full"
+          >
+            <path d="M284 32L120 260h84l-40 220 180-248h-92l56-200z" fill="white" />
+          </svg>
+        </div>
       </div>
-      <ToolNavbar />
+      <div
+        className={cn(
+          "relative z-10 min-h-screen ai-ocr-bg font-sans transition-colors duration-300 text-slate-900"
+        )}
+      >
+        <ToolNavbar />
 
-      <div className="container mx-auto px-4 py-8 md:py-16 flex flex-col items-center justify-center min-h-[90vh]">
+          <div className="container mx-auto px-4 py-8 md:py-16 flex flex-col items-center justify-center min-h-[90vh]">
         <div className="w-full max-w-4xl space-y-8">
           <div className="text-center space-y-3">
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-cyan-400">

@@ -145,13 +145,11 @@ export default function OcrMonitor() {
     const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
     const [localEngine, setLocalEngine] = useState<"gemini" | "tesseract">("tesseract");
 
-    // Detect which engine was last actually used
     useEffect(() => {
         const lastUsed = localStorage.getItem("Thundocs_last_engine") as "gemini" | "tesseract" | null;
         if (lastUsed) {
             setLocalEngine(lastUsed);
         } else {
-            // Fallback: if no extraction yet, infer from API key presence
             const hasKey = !!localStorage.getItem(GEMINI_KEY_STORAGE);
             setLocalEngine(hasKey ? "gemini" : "tesseract");
         }
@@ -191,11 +189,33 @@ export default function OcrMonitor() {
     };
 
     return (
-        <div className={`relative min-h-screen ai-ocr-bg ${themeStyles.text} font-sans overflow-hidden`}>
-            <div className="pointer-events-none fixed inset-0 flex items-center justify-center opacity-[0.05]">
-                <img src="/thundocs-icon.svg" alt="" className="w-80 h-80 drop-shadow-[0_0_48px_rgba(255,255,255,0.25)]" />
+        <div className="hero-group relative min-h-screen bg-[#020408] font-sans">
+            <div className="absolute inset-0 pointer-events-none">
+                <div
+                    className="absolute inset-0 opacity-25"
+                    style={{
+                        backgroundImage: "radial-gradient(rgba(0,240,255,0.03) 1px, transparent 1px)",
+                        backgroundSize: "40px 40px",
+                    }}
+                />
+                <div
+                    className="absolute -top-40 -left-16 w-[640px] h-[640px] rounded-full opacity-30 blur-[120px]"
+                    style={{
+                        background:
+                            "radial-gradient(circle at 30% 30%, #00f0ff 0%, #0055ff 40%, transparent 70%)",
+                    }}
+                />
+                <div className="absolute top-1/2 left-1/2 w-[900px] h-[900px] -translate-x-1/2 -translate-y-1/2 -rotate-[5deg]">
+                    <svg
+                        viewBox="0 0 512 512"
+                        className="thunder-bolt-svg hero-bolt w-full h-full"
+                    >
+                        <path d="M284 32L120 260h84l-40 220 180-248h-92l56-200z" fill="white" />
+                    </svg>
+                </div>
             </div>
-            <ToolNavbar />
+            <div className={`relative z-10 min-h-screen ai-ocr-bg ${themeStyles.text} font-sans`}>
+                <ToolNavbar />
 
             <div className="container mx-auto px-4 py-10 max-w-6xl">
                 {/* Header */}
