@@ -1,4 +1,4 @@
-"use client";
+
 
 import React, { memo, useCallback, useEffect, useRef } from "react";
 import type { CSSProperties } from "react";
