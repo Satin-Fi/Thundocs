@@ -9,7 +9,7 @@ import multer from "multer";
 import fs from "fs";
 import path from "path";
 import os from "os";
-import { execFile } from "child_process";
+import { execFile, spawnSync } from "child_process";
 
 // ── LibreOffice helpers ────────────────────────────────────────────────────────
 const pdfUpload = multer({ dest: os.tmpdir() });
@@ -228,7 +228,6 @@ export function createServer() {
 
         // Fallback: try running it from system PATH
         try {
-          const { spawnSync } = require("child_process") as typeof import("child_process");
           const r = spawnSync("gswin64c", ["--version"], { timeout: 3000, encoding: "utf8" });
           if (r.status === 0) return true;
         } catch {}
