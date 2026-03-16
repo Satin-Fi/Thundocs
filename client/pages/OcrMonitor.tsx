@@ -214,7 +214,7 @@ export default function OcrMonitor() {
                     </svg>
                 </div>
             </div>
-            <div className={`relative z-10 min-h-screen ai-ocr-bg ${themeStyles.text} font-sans`}>
+            <div className={`relative z-10 min-h-screen ${themeStyles.text} font-sans`}>
                 <ToolNavbar />
 
             <div className="container mx-auto px-4 py-10 max-w-6xl">
