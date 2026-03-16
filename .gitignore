@@ -24,3 +24,12 @@ dist-ssr
 *.sw?
 
 .config/
+
+# Temporary and custom artifacts
+tmp_*.cjs
+bash.exe.stackdump
+tsc_output.txt
+typescript-errors.txt
+
+# Windows special file created accidentally
+client/NUL

@@ -1,6 +1,114 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 10% 3.9%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply text-foreground;
+    background-color: #020408;
+    font-family: 'Inter', sans-serif;
+  }
+
+  body {
+    scrollbar-width: thin;
+    scrollbar-color: #9ca3af transparent;
+  }
+
+  body::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  body::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  body::-webkit-scrollbar-thumb {
+    background: linear-gradient(to bottom, #fb5fd6, #fb923c);
+    border-radius: 9999px;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  .font-heading {
+    font-family: 'Space Grotesk', sans-serif;
+    letter-spacing: -0.025em;
+  }
+
+  .font-body {
+    font-family: 'Inter', sans-serif;
+  }
+}
 
 /* React Easy Crop styles for better mobile experience */
 .reactEasyCrop_Container {
@@ -47,316 +155,868 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
-.slider::-moz-range-track {
-  background: #e5e7eb;
-  height: 8px;
-  border-radius: 4px;
-  border: none;
+.hero-gradient-text {
+  background: linear-gradient(135deg, #ffffff 0%, #3B82F6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-.dark .slider::-moz-range-track {
-  background: #374151;
+.tool-card-glow {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
 }
 
-.slider::-moz-range-thumb {
-  background: #3b82f6;
-  height: 20px;
-  width: 20px;
-  border-radius: 50%;
-  cursor: pointer;
-  border: none;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s ease;
-}
-
-.slider::-moz-range-thumb:hover {
-  background: #2563eb;
-  transform: scale(1.1);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
-
-/* Smooth animations */
-.image-editor-modal {
-  backdrop-filter: blur(8px);
-}
-
-/* Touch-friendly button styles */
-@media (max-width: 768px) {
-  .touch-button {
-    min-height: 44px;
-    min-width: 44px;
-  }
-}
-
-@layer base {
-  /**
-   * Tailwind CSS theme
-   * tailwind.config.ts expects the following color variables to be expressed as HSL values.
-   * A different format will require also updating the theme in tailwind.config.ts.
-  */
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-
-    --primary: 262 83% 58%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-
-    --radius: 0.75rem;
-
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-
-    /* Brand Colors - Sophisticated Blue/Teal Gradient */
-    --brand-50: 210 100% 98%;
-    --brand-100: 210 95% 95%;
-    --brand-200: 210 88% 89%;
-    --brand-300: 210 80% 81%;
-    --brand-400: 210 75% 70%;
-    --brand-500: 210 85% 58%;
-    --brand-600: 210 90% 48%;
-    --brand-700: 210 92% 40%;
-    --brand-800: 210 94% 32%;
-    --brand-900: 210 96% 26%;
-    --brand-950: 210 98% 18%;
-
-    /* Gradient Colors - More sophisticated */
-    --gradient-from: 210 85% 58%;
-    --gradient-via: 195 85% 62%;
-    --gradient-to: 180 85% 66%;
-  }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 217.2 32.6% 8.5%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 217.2 32.6% 8.5%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 262 83% 58%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 262 83% 58%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 262 83% 58%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 262 83% 58%;
-
-    /* Brand Colors - Dark Mode */
-    --brand-50: 210 98% 18%;
-    --brand-100: 210 96% 26%;
-    --brand-200: 210 94% 32%;
-    --brand-300: 210 92% 40%;
-    --brand-400: 210 90% 48%;
-    --brand-500: 210 85% 58%;
-    --brand-600: 210 75% 70%;
-    --brand-700: 210 80% 81%;
-    --brand-800: 210 88% 89%;
-    --brand-900: 210 95% 95%;
-    --brand-950: 210 100% 98%;
-
-    /* Gradient Colors - Dark Mode */
-    --gradient-from: 210 85% 58%;
-    --gradient-via: 195 85% 62%;
-    --gradient-to: 180 85% 66%;
-  }
-}
-
-@layer base {
-  * {
-    @apply border-border;
-  }
-
-  body {
-    @apply bg-background text-foreground;
-  }
-
-  /* Force light mode by default */
-  :root {
-    color-scheme: light;
-  }
-}
-
-@layer utilities {
-  .perspective-1000 {
-    perspective: 1000px;
-  }
-
-  .perspective-2000 {
-    perspective: 2000px;
-  }
-
-  .transform-gpu {
-    transform: translateZ(0);
-    backface-visibility: hidden;
-    perspective: 1000px;
-  }
-
-  .preserve-3d {
-    transform-style: preserve-3d;
-  }
-
-  .backface-hidden {
-    backface-visibility: hidden;
-  }
-
-  .animate-float {
-    animation: float 6s ease-in-out infinite;
-  }
-
-  .animate-float-slow {
-    animation: float 8s ease-in-out infinite;
-  }
-
-  .animate-pulse-slow {
-    animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  }
-
-  .animate-subtle-glow {
-    animation: subtleGlow 4s ease-in-out infinite alternate;
-  }
-
-  .gradient-animation {
-    background: linear-gradient(
-      -45deg,
-      #3b82f6,
-      #1d4ed8,
-      #0891b2,
-      #0e7490,
-      #059669,
-      #047857
-    );
-    background-size: 400% 400%;
-    animation: gradientShift 15s ease infinite;
-  }
+.tool-card-glow:hover {
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.5), 0 0 20px -5px rgba(59, 130, 246, 0.3);
 }
 
 @keyframes float {
+
   0%,
   100% {
-    transform: translateY(0px) rotateX(0deg) rotateY(0deg);
+    transform: translateY(0px);
   }
+
   50% {
-    transform: translateY(-20px) rotateX(5deg) rotateY(5deg);
+    transform: translateY(-20px);
   }
 }
 
-@keyframes subtleGlow {
-  from {
-    text-shadow: 0 0 5px rgba(255, 255, 255, 0.1);
-  }
-  to {
-    text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
-  }
+.animate-float {
+  animation: float 6s ease-in-out infinite;
 }
 
-@keyframes gradientShift {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
+@keyframes float-1 {
+
+  0%,
   100% {
-    background-position: 0% 50%;
+    transform: translate(0, 0) rotate(-6deg);
+  }
+
+  50% {
+    transform: translate(-20px, 20px) rotate(-3deg);
   }
 }
 
-/* Smooth scrolling */
-html {
-  scroll-behavior: smooth;
+@keyframes float-2 {
+
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(12deg);
+  }
+
+  50% {
+    transform: translate(20px, -15px) rotate(8deg);
+  }
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
+@keyframes float-3 {
+
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(3deg);
+  }
+
+  50% {
+    transform: translate(-15px, -20px) rotate(6deg);
+  }
 }
 
-::-webkit-scrollbar-track {
+.animate-float-1 {
+  animation: float-1 12s ease-in-out infinite;
+}
+
+.animate-float-2 {
+  animation: float-2 15s ease-in-out infinite;
+}
+
+.animate-float-3 {
+  animation: float-3 14s ease-in-out infinite;
+}
+
+@keyframes slow-pulse {
+
+  0%,
+  100% {
+    opacity: 0.2;
+  }
+
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.animate-slow-pulse {
+  animation: slow-pulse 6s ease-in-out infinite;
+}
+
+@keyframes step-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+
+  50% {
+    transform: scale(1.35);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+}
+
+.animate-step-pulse {
+  animation: step-pulse 1.3s ease-in-out infinite;
+}
+
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.5s ease-out forwards;
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transform: translateZ(0);
+  /* Force GPU acceleration for blur */
+}
+
+/* Deep liquid glass shell for full-screen editors (dark, glossy panel) */
+.image-editor-shell {
+  position: relative;
+  background:
+    linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.99)),
+    radial-gradient(120% 150% at 0% 0%, rgba(148, 163, 184, 0.48) 0%, transparent 55%),
+    radial-gradient(140% 180% at 100% 0%, rgba(56, 189, 248, 0.28) 0%, transparent 60%),
+    radial-gradient(160% 200% at 50% 100%, rgba(15, 23, 42, 0.97) 0%, rgba(15, 23, 42, 0.99) 40%);
+  backdrop-filter: blur(38px) saturate(180%);
+  -webkit-backdrop-filter: blur(38px) saturate(180%);
+  border-radius: 32px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  box-shadow:
+    0 32px 80px -40px rgba(15, 23, 42, 0.9),
+    0 0 0 1px rgba(15, 23, 42, 0.8),
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+}
+
+.compress-hero {
+  --c-magenta: #ff00cc;
+  --c-orange: #ff6600;
+  --c-yellow: #ffcc00;
+  --c-lime: #ccff00;
+  --c-cyan: #00ccff;
+  --c-purple: #9900ff;
+  --text-main: #2a2a2a;
+  --text-muted: #888888;
+}
+
+.compress-hero .label-text {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.compress-hero .hero-title {
+  font-size: clamp(2.6rem, 5vw, 4.5rem);
+  line-height: 1;
+  font-weight: 700;
+  margin-top: 0.75rem;
+  margin-bottom: 1.5rem;
+  background: linear-gradient(180deg, #1a1a1a 0%, #4a4a4a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.compress-hero .hero-desc {
+  font-size: 1.125rem;
+  color: #666;
+  max-width: 420px;
+  line-height: 1.6;
+}
+
+.compress-hero .hero-grid {
+  display: grid;
+  gap: 2.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  align-items: center;
+}
+
+.compress-hero .composition-layer {
+  position: relative;
+  height: 720px;
+  width: 100%;
+}
+
+.compress-hero .ribbon {
+  position: absolute;
+  border-radius: 40px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
+}
+
+.compress-hero .r-1 {
+  bottom: 70px;
+  right: 0;
+  width: 82%;
+  height: 140px;
+  background: linear-gradient(to right, var(--c-cyan), var(--c-purple));
+  z-index: 1;
+  opacity: 0.9;
+}
+
+.compress-hero .r-2 {
+  top: 240px;
+  left: 16px;
+  width: 92%;
+  height: 160px;
   background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  z-index: 2;
+  overflow: hidden;
 }
 
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 4px;
+.compress-hero .r-2::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to right, var(--c-lime), var(--c-yellow));
+  opacity: 0.3;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.5);
+.compress-hero .r-3 {
+  top: 50px;
+  right: 36px;
+  width: 62%;
+  height: 120px;
+  background: linear-gradient(to right, var(--c-magenta), var(--c-orange));
+  z-index: 3;
+  box-shadow: 0 30px 60px rgba(255, 0, 204, 0.3);
 }
 
-/* React Perspective Cropper container sizing fixes */
-/* Target the cropper container and its children */
-[data-crop-container] canvas,
-[data-crop-container] img,
-.QuadrilateralCropper canvas,
-.QuadrilateralCropper img {
-  width: 100% !important;
+.compress-hero .upload-zone {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 360px;
+  height: 460px;
+  border-radius: 30px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 2rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.2) 100%);
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.08);
+}
+
+/* Standalone upload card for tools like Split — same style as compress upload card, no ribbons */
+.split-upload-card {
+  position: relative;
+  width: 360px;
+  min-height: 520px;
+  border-radius: 30px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 2rem;
+  color: #111827;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.2) 100%);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.08);
+}
+
+/* Taller variant for final download card on Split page (matches Compress download card height) */
+.split-download-card {
+  position: relative;
+  width: 360px;
+  height: 600px;
+  border-radius: 30px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 2.25rem 2rem;
+  cursor: default;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.65) 0%, rgba(255, 255, 255, 0.25) 100%);
+  backdrop-filter: blur(26px);
+  -webkit-backdrop-filter: blur(26px);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 30px 60px -24px rgba(15, 23, 42, 0.35);
+}
+
+.compress-hero .upload-card {
+  z-index: 10;
+  align-items: stretch;
+  text-align: left;
+  min-height: 520px;
+  height: auto;
+}
+
+/* Inline variant for grid usage: make the card fill its column instead of centering */
+.compress-hero .inline-card {
+  position: relative;
+  left: auto;
+  top: auto;
+  transform: none;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+}
+
+.compress-hero .upload-progress-track {
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+}
+
+.compress-hero .upload-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ff00cc, #ff6600);
+  box-shadow: 0 6px 16px rgba(255, 102, 0, 0.25);
+  transition: width 200ms ease;
+}
+
+.split-upload-card .upload-progress-track {
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+}
+
+.split-upload-card .upload-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ff00cc, #ff6600);
+  box-shadow: 0 6px 16px rgba(255, 102, 0, 0.25);
+  transition: width 200ms ease;
+}
+
+.compress-hero .success-panel {
+  position: relative;
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.compress-hero .success-panel-blobs {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.compress-hero .success-panel-card {
+  position: relative;
+  z-index: 2;
+  border-radius: 28px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.35) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow: 0 18px 50px -28px rgba(15, 23, 42, 0.35);
+  padding: 1.75rem;
+}
+
+.compress-hero .success-composition {
   height: 100% !important;
-  max-width: 100% !important;
-  max-height: 100% !important;
-  object-fit: contain !important;
 }
 
-/* Force consistent sizing for all cropper elements */
-.QuadrilateralCropper {
-  width: 100% !important;
+/* Success container blob overrides — match reference image layout */
+.compress-hero .success-composition .r-3 {
+  /* Pink→orange blob peeks above, centered at top */
+  top: -40px;
+  right: 10%;
+  left: 10%;
+  width: 110%;
+  height: 130px;
+}
+
+.compress-hero .success-composition .r-2 {
+  /* Lime→yellow frosted blob on left-middle, sticking out */
+  top: 35%;
+  left: -30px;
+  width: 122%;
+  height: 120px;
+}
+
+.compress-hero .success-composition .r-1 {
+  /* Cyan→purple blob peeks from bottom-right */
+  bottom: -30px;
+  right: -20px;
+  left: auto;
+  width: 100%;
+  height: 140px;
+}
+
+.compress-hero .info-composition {
   height: 100% !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
 }
 
-/* Override any inline styles from the library */
-.QuadrilateralCropper > * {
-  max-width: 100% !important;
-  max-height: 100% !important;
+/* Stats container blob overrides */
+.compress-hero .info-composition .r-3 {
+  top: -30px;
+  left: -20px;
+  right: auto;
+  width: 90%;
+  height: 110px;
+}
+
+.compress-hero .info-composition .r-2 {
+  top: 60%;
+  left: -40px;
+  width: 105%;
+  height: 140px;
+}
+
+.compress-hero .info-composition .r-1 {
+  bottom: -160px;
+  /* Stretch down behind settings panel */
+  left: -30px;
+  right: auto;
+  width: 80%;
+  height: 160px;
+}
+
+.compress-hero .settings-composition {
+  height: auto !important;
+  min-height: unset;
+}
+
+.compress-hero .upload-zone.info-card {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  min-height: 480px;
+  align-items: stretch;
+  text-align: left;
+  /* Reset absolute centering — used inside inline grid */
+  position: relative;
+  top: auto;
+  left: auto;
+  transform: none;
+  padding: 1.5rem;
+  /* Ensure proper padding for inner content */
+  overflow: visible;
+  /* Prevent chopping of inner toolbars */
+}
+
+/* Settings panel card overrides — slim horizontal strip, no min-height */
+.compress-hero .settings-composition .upload-zone.info-card {
+  min-height: unset !important;
+  height: auto !important;
+  padding: 1.25rem !important;
+  /* Slightly smaller padding for settings panel */
+}
+
+/* Modern gradient DPI slider */
+.dpi-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  outline: none;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.dpi-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.dpi-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+}
+
+.dpi-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+}
+
+.compress-hero .result-card {
+  position: relative;
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.35) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow: 0 18px 50px -28px rgba(15, 23, 42, 0.35);
+  padding: 1.25rem;
+  overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  .compress-hero .result-card {
+    padding: 1.5rem;
+  }
+}
+
+.compress-hero .result-card::before,
+.compress-hero .result-card::after {
+  content: "";
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(0);
+  opacity: 0.8;
+  z-index: 0;
+}
+
+.compress-hero .result-card::before {
+  top: 10px;
+  right: 14px;
+  width: 140px;
+  height: 52px;
+  background: linear-gradient(90deg, #ff00cc, #ff6600);
+}
+
+.compress-hero .result-card::after {
+  bottom: 10px;
+  left: 14px;
+  width: 150px;
+  height: 60px;
+  background: linear-gradient(90deg, #00ccff, #9900ff);
+}
+
+@media (min-width: 768px) {
+  .compress-hero .success-panel-card {
+    padding: 2.25rem;
+  }
+}
+
+.compress-hero .upload-zone.drag-active {
+  box-shadow: 0 40px 80px rgba(0, 0, 0, 0.12), inset 0 0 0 2px rgba(255, 255, 255, 0.85);
+  transform: translate(-50%, -50%) scale(1.02);
+}
+
+.split-upload-card.drag-active {
+  box-shadow: 0 40px 80px rgba(0, 0, 0, 0.12), inset 0 0 0 2px rgba(255, 255, 255, 0.85);
+  transform: scale(1.02);
+}
+
+.compress-hero .btn-main {
+  margin-top: 1.5rem;
+  background: #111;
+  color: #fff;
+  padding: 1rem 2rem;
+  border-radius: 50px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.compress-hero .btn-main:hover {
+  transform: scale(1.05);
+}
+
+.split-upload-card .btn-main {
+  margin-top: 1.5rem;
+  background: #111;
+  color: #fff;
+  padding: 1rem 2rem;
+  border-radius: 50px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.split-upload-card .btn-main:hover {
+  transform: scale(1.05);
+}
+
+.compress-navbar .compress-nav-shell {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.65) 0%, rgba(255, 255, 255, 0.3) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.compress-navbar .compress-logo span {
+  color: #1f1f1f;
+}
+
+.compress-navbar .compress-nav-links {
+  color: #6b6b6b;
+}
+
+.compress-navbar .compress-nav-links a,
+.compress-navbar .compress-nav-links button {
+  color: #6b6b6b;
+}
+
+.compress-navbar .compress-nav-links a:hover,
+.compress-navbar .compress-nav-links button:hover {
+  color: #1a1a1a;
+}
+
+.compress-navbar .compress-nav-links a.text-cyan-300 {
+  color: #ff6600;
+}
+
+.compress-navbar .compress-nav-shell button {
+  color: #6b6b6b;
+}
+
+.compress-navbar .compress-nav-shell button:hover {
+  color: #1a1a1a;
+}
+
+
+.compress-bg {
+  background-image: url("/wallpapers/compress-bg.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: #0a0f1c;
+}
+
+.excel-bg {
+  background-image: url("/wallpapers/Excel-bg.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: #020617;
+}
+
+.merge-bg {
+  background-image: url("/wallpapers/merge-bg.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: #020617;
+}
+
+.split-bg {
+  background-image: url("/wallpapers/split-bg.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: #020617;
+}
+
+.pdf-to-image-bg {
+  background-image: url("/wallpapers/pdf-to-image-bg.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: #020617;
+}
+
+.protect-bg {
+  background-image: url("/wallpapers/protect-bg.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: #020617;
+}
+
+.pdf-to-word-bg {
+  background-image: url("/wallpapers/pdf-to-word-bg.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: #020617;
+}
+
+.image-to-pdf-bg {
+  background-image: url("/wallpapers/image-to-pdf-bg.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: #020617;
+}
+
+.word-to-pdf-bg {
+  background-image: url("/wallpapers/word-to-pdf-bg.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: #020617;
+}
+
+.powerpoint-to-pdf-bg {
+  background-image: url("/wallpapers/powerpoint-to-pdf-bg.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: #020617;
+}
+
+.unlock-pdf-bg {
+  background-image: url("/wallpapers/unlock-pdf-bg.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: #020617;
+}
+
+.ai-ocr-bg {
+  background-image: url("/wallpapers/ai-ocr-bg.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: #020617;
+}
+
+.ai-pdf-chat-bg {
+  background-image: url("/wallpapers/ai-pdf-chat-bg.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: #020617;
+}
+
+/* Hide native number input spin buttons to use custom UI arrows */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+  /* Firefox */
+}
+
+/* Premium Scrollbar */
+.premium-scrollbar::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+
+.premium-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.premium-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(161, 161, 170, 0.5);
+  border-radius: 10px;
+  border: 4px solid transparent;
+  background-clip: padding-box;
+}
+
+.premium-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(161, 161, 170, 0.7);
+}
+
+@keyframes thunder-flicker {
+  0%, 100% {
+    opacity: 0.15;
+    filter: drop-shadow(0 0 40px rgba(0, 240, 255, 0.4));
+  }
+  92% {
+    opacity: 0.15;
+  }
+  93% {
+    opacity: 0.4;
+    filter: drop-shadow(0 0 80px rgba(255, 255, 255, 0.8));
+  }
+  94% {
+    opacity: 0.2;
+  }
+  96% {
+    opacity: 0.5;
+    filter: drop-shadow(0 0 100px rgba(0, 240, 255, 1));
+  }
+  97% {
+    opacity: 0.15;
+  }
+}
+
+.thunder-bolt-svg {
+  opacity: 0.15;
+  filter: drop-shadow(0 0 40px rgba(0, 240, 255, 0.4));
+  animation: thunder-flicker 4s infinite;
+}
+
+.tools-bolt {
+  opacity: 0.6;
+  filter: drop-shadow(0 0 80px rgba(0, 240, 255, 0.9));
+}
+
+.hero-bolt {
+  transition: opacity 0.3s ease, filter 0.3s ease, transform 0.3s ease;
+}
+
+.hero-group:hover .hero-bolt {
+  opacity: 0.4;
+  filter: drop-shadow(0 0 120px rgba(0, 240, 255, 1));
+  transform: scale(1.03);
+}
+
+.split-bolt {
+  opacity: 0.5;
+  filter: drop-shadow(0 0 140px rgba(0, 240, 255, 1));
+}
+
+.home-bolt {
+  opacity: 0.6;
+  filter: drop-shadow(0 0 200px rgba(0, 240, 255, 1));
+}
+
+.hero-group:hover .home-bolt {
+  opacity: 0.8;
+  filter: drop-shadow(0 0 260px rgba(0, 240, 255, 1));
 }

@@ -1,0 +1,426 @@
+<html lang="en" vid="0"><head vid="1">
+    <meta charset="UTF-8" vid="2">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" vid="3">
+    <title vid="4">Thundocs | Lightning Fast Document Conversion</title>
+    
+    <style vid="5">
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+
+        :root {
+            --bg-deep: #020408;
+            --grid-color: rgba(0, 240, 255, 0.03);
+            --text-main: #ffffff;
+            --text-dim: rgba(255, 255, 255, 0.6);
+            --text-ghost: rgba(255, 255, 255, 0.03);
+            
+            --glow-core: #ffffff;
+            --glow-cyan: #00f0ff;
+            --glow-blue: #0055ff;
+            
+            --glass-bg: rgba(255, 255, 255, 0.02);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --glass-highlight: rgba(255, 255, 255, 0.2);
+            --liquid-surface: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 50%, rgba(255, 255, 255, 0.05) 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        
+        .ambient-system {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            overflow: hidden;
+            background-image: radial-gradient(var(--grid-color) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        
+        .liquid-orb {
+            position: absolute;
+            width: 800px;
+            height: 800px;
+            background: radial-gradient(circle at 30% 30%, var(--glow-cyan) 0%, var(--glow-blue) 40%, transparent 70%);
+            filter: blur(120px);
+            opacity: 0.2;
+            top: -200px;
+            left: -100px;
+            animation: drift 20s infinite alternate ease-in-out;
+        }
+
+        @keyframes drift {
+            from { transform: translate(0, 0) scale(1); }
+            to { transform: translate(100px, 50px) scale(1.1); }
+        }
+
+        
+        .thunder-bolt-container {
+            position: absolute;
+            top: 45%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-5deg);
+            width: 1000px;
+            height: 1000px;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .thunder-bolt-svg {
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 0 40px rgba(0, 240, 255, 0.4));
+            opacity: 0.15;
+            animation: thunder-flicker 4s infinite;
+        }
+
+        @keyframes thunder-flicker {
+            0%, 100% { opacity: 0.15; filter: drop-shadow(0 0 40px rgba(0, 240, 255, 0.4)); }
+            92% { opacity: 0.15; }
+            93% { opacity: 0.4; filter: drop-shadow(0 0 80px rgba(255, 255, 255, 0.8)); }
+            94% { opacity: 0.2; }
+            96% { opacity: 0.5; filter: drop-shadow(0 0 100px var(--glow-cyan)); }
+            97% { opacity: 0.15; }
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1440px;
+            min-height: 1024px;
+            padding: 0 80px;
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 32px 40px;
+            margin-top: 24px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 700;
+            font-size: 18px;
+            letter-spacing: -0.02em;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #fff, var(--glow-cyan));
+            border-radius: 8px;
+            position: relative;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+        }
+        
+        .logo-icon::after {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 10px; height: 10px;
+            background: var(--bg-deep);
+            border-radius: 2px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 40px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-dim);
+        }
+
+        .nav-links a {
+            color: inherit;
+            text-decoration: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .nav-links a:hover {
+            color: var(--text-main);
+            text-shadow: 0 0 8px rgba(255,255,255,0.5);
+        }
+
+        .btn-initialize {
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+            border: 1px solid var(--glass-highlight);
+            color: var(--text-main);
+            padding: 10px 24px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .btn-initialize:hover {
+            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--glow-cyan);
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.2);
+        }
+
+        
+        header {
+            text-align: center;
+            margin-top: 120px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .badge-liquid {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(0, 240, 255, 0.05);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            padding: 8px 20px;
+            border-radius: 100px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--glow-cyan);
+            margin-bottom: 32px;
+            backdrop-filter: blur(8px);
+            letter-spacing: 0.05em;
+        }
+
+        .badge-liquid .pulse {
+            width: 8px; height: 8px;
+            background: var(--glow-cyan);
+            border-radius: 50%;
+            box-shadow: 0 0 12px var(--glow-cyan);
+            animation: pulse-ring 2s infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); opacity: 0.5; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(0.8); opacity: 0.5; }
+        }
+
+        h1 {
+            font-size: 96px;
+            font-weight: 700;
+            letter-spacing: -0.05em;
+            line-height: 0.95;
+            margin-bottom: 32px;
+            color: var(--text-main);
+        }
+
+        
+        .liquid-text-wrap {
+            position: relative;
+            display: inline-block;
+            padding: 0 24px;
+            color: #fff;
+        }
+
+        .liquid-text-wrap::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: var(--liquid-surface);
+            border-radius: 24px;
+            border: 1px solid var(--glass-highlight);
+            box-shadow: 
+                inset 0 0 20px rgba(255,255,255,0.1),
+                0 20px 40px rgba(0,0,0,0.4);
+            z-index: -1;
+            transform: skewX(-5deg);
+        }
+
+        .liquid-text-wrap::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at 20% 20%, rgba(255,255,255,0.4) 0%, transparent 40%);
+            border-radius: 24px;
+            z-index: -1;
+            transform: skewX(-5deg);
+        }
+
+        p.hero-sub {
+            font-size: 20px;
+            color: var(--text-dim);
+            max-width: 640px;
+            margin: 0 auto;
+            line-height: 1.6;
+            font-weight: 400;
+        }
+
+        
+        .hero-actions {
+            margin-top: 60px;
+            display: flex;
+            gap: 24px;
+            justify-content: center;
+        }
+
+        .btn-primary {
+            background: #ffffff;
+            color: #000;
+            padding: 18px 40px;
+            border-radius: 16px;
+            font-size: 16px;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 50px rgba(0, 240, 255, 0.4);
+        }
+
+        
+        .info-cards {
+            display: flex;
+            gap: 32px;
+            margin-top: 100px;
+            justify-content: center;
+        }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(40px);
+            border: 1px solid var(--glass-border);
+            padding: 40px;
+            border-radius: 32px;
+            width: 320px;
+            text-align: left;
+            transition: all 0.4s ease;
+        }
+
+        .glass-card:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: var(--glass-highlight);
+            transform: translateY(-10px);
+        }
+
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+            color: var(--glow-cyan);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .card-desc {
+            font-size: 14px;
+            color: var(--text-dim);
+            line-height: 1.5;
+        }
+
+        .ghost-bg-text {
+            position: absolute;
+            top: 250px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 240px;
+            font-weight: 900;
+            color: var(--text-ghost);
+            white-space: nowrap;
+            letter-spacing: -0.08em;
+            pointer-events: none;
+            z-index: 0;
+            user-select: none;
+        }
+
+    </style>
+</head>
+<body vid="6">
+
+    <div class="ambient-system" vid="7">
+        <div class="liquid-orb" vid="8"></div>
+        <div class="thunder-bolt-container" vid="9">
+            <svg class="thunder-bolt-svg" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" vid="10">
+                <path d="M284 32L120 260h84l-40 220 180-248h-92l56-200z" fill="white" vid="11"></path>
+            </svg>
+        </div>
+    </div>
+
+    <div class="container" vid="12">
+        
+
+        <nav vid="13">
+            <div class="logo" vid="14">\n                <div class="logo-icon" vid="15"></div>\n                Thundocs\n            </div>
+            <div class="nav-links" vid="16">
+                <a href="#" vid="17">Protocol</a>
+                <a href="#" vid="18">Engines</a>
+                <a href="#" vid="19">Ecosystem</a>
+                <a href="#" vid="20">Security</a>
+            </div>
+            <div class="nav-actions" vid="21">
+                <button class="btn-initialize" vid="22">Initialize Terminal</button>
+            </div>
+        </nav>
+
+        <header vid="23">
+            <div class="badge-liquid" vid="24">
+                <div class="pulse" vid="25"></div>
+                V2.8 LIQUID ARCHITECTURE
+            </div>
+            <h1 vid="26">
+                Process assets with<br vid="27">
+                <span class="liquid-text-wrap" vid="28">liquid precision.</span>
+            </h1>
+            <p class="hero-sub" vid="29">
+                A high-fidelity document matrix engineered for the next generation. Experience zero-latency transformations with autonomous encryption layers.
+            </p>
+
+            <div class="hero-actions" vid="30">
+                <button class="btn-primary" vid="31">Get Started</button>
+                <button class="btn-initialize" style="padding: 18px 40px;" vid="32">View Documentation</button>
+            </div>
+        </header>
+
+        <div class="info-cards" vid="33">\n            <div class="glass-card" vid="34">\n                <div class="card-icon" vid="35">\n                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" vid="36"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" vid="37"></rect><circle cx="8.5" cy="8.5" r="1.5" vid="38"></circle><polyline points="21 15 16 10 5 21" vid="39"></polyline></svg>\n                </div>\n                <div class="card-title" vid="40">Image to PDF</div>\n                <div class="card-desc" vid="41">Convert JPG, PNG, WEBP images to pristine PDF documents. Multi-file batch processing supported.</div>\n            </div>\n            <div class="glass-card" vid="42">\n                <div class="card-icon" vid="43">\n                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" vid="44"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" vid="45"></path><polyline points="14 2 14 8 20 8" vid="46"></polyline><line x1="16" y1="13" x2="8" y2="13" vid="47"></line><line x1="16" y1="17" x2="8" y2="17" vid="48"></line><polyline points="10 9 9 9 8 9" vid="49"></polyline></svg>\n                </div>\n                <div class="card-title" vid="50">Word to PDF</div>\n                <div class="card-desc" vid="51">Transform DOCX files into production-ready PDFs. Preserves formatting, fonts, and layouts perfectly.</div>\n            </div>\n        </div>
+    </div>
+
+</body></html>

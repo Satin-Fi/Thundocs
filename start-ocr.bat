@@ -1,0 +1,9 @@
+@echo off
+echo Starting EasyOCR Server...
+echo ---------------------------------------------------
+echo Installing requirements...
+pip install -r requirements.txt
+echo.
+echo Starting Server...
+python ocr_server.py
+pause

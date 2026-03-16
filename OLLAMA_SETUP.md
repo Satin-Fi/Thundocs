@@ -1,44 +1,24 @@
-# Ollama Setup Guide for AI PDF Chat
+# AI Setup Guide (Local LLaMA)
 
-This guide will help you set up Ollama to power the AI PDF chat functionality in your application.
+## 1. Start the AI Server
+We have created a script that handles everything for you (CORS, Paths, etc.).
 
-## Installation
+1.  Open the folder: `c:\Users\Piyush\Downloads\pixel-haven 2`
+2.  Double-click the **`start-ai.bat`** file.
+3.  A black terminal window will open. **Keep it open!**
 
-### 1. Install Ollama
+## 2. Start the Website
+(You are likely already doing this)
+1.  Open your coding terminal.
+2.  Run `npm run dev`
+3.  Go to `http://localhost:8080`
 
-**Windows:**
-- Download Ollama from: https://ollama.ai/download
-- Run the installer and follow the setup instructions
+## 3. Verify Connection
+1.  Go to the "AI Chat" page.
+2.  Click the **Settings (Gear Icon)**.
+3.  It should say **"Ollama Connection: ✅ Connected"**.
 
-**macOS:**
-```bash
-brew install ollama
-```
-
-**Linux:**
-```bash
-curl -fsSL https://ollama.ai/install.sh | sh
-```
-
-### 2. Start Ollama Service
-
-After installation, start the Ollama service:
-
-```bash
-ollama serve
-```
-
-This will start Ollama on `http://localhost:11434`
-
-### 3. Pull a Language Model
-
-Download a language model (we recommend starting with Llama 2):
-
-```bash
-ollama pull llama2
-```
-
-Other available models:
+If the *Model* check fails, simply click the "Pull Model" button in the settings (or run `ollama pull llama3.1` in a new terminal).:
 - `ollama pull llama2:7b` (smaller, faster)
 - `ollama pull llama2:13b` (larger, more capable)
 - `ollama pull codellama` (specialized for code)
