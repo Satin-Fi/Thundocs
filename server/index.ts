@@ -138,6 +138,11 @@ export function createServer() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
+  // Basic health check for infrastructure monitoring
+  app.get("/health", (_req, res) => {
+    res.json({ status: "ok" });
+  });
+
   // Global Rate Limiting - DDoS Protection (disabled in local dev)
   const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
