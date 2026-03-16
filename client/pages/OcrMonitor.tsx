@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
@@ -73,7 +74,11 @@ function StatCard({
 
 // ── Engine Badge ────────────────────────────────────────────────────────────
 function EngineBadge({ engine }: { engine: "gemini" | "tesseract" }) {
-    return engine === "gemini" ? (
+    const isGemini = engine === "gemini";
+    const lastUsed = localStorage.getItem("Thundocs_last_engine") as "native" | "tesseract" | "gemini" | null;
+    const isLastUsedGemini = lastUsed === "gemini";
+
+    return isGemini || isLastUsedGemini ? (
         <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-600/30 text-indigo-100 border border-indigo-400/50 shadow-sm backdrop-blur-md">
             <Sparkles className="w-2.5 h-2.5 text-indigo-300" /> AI Vision
         </span>
@@ -142,14 +147,12 @@ export default function OcrMonitor() {
     const [stats, setStats] = useState<OcrStats | null>(null);
     const [loading, setLoading] = useState(true);
     const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
-    const [localEngine, setLocalEngine] = useState<"native" | "tesseract">("tesseract");
+    const [localEngine, setLocalEngine] = useState<"native" | "tesseract" | "gemini">("tesseract");
 
     useEffect(() => {
-        const lastUsed = localStorage.getItem("Thundocs_last_engine") as "native" | "tesseract" | null;
-        if (lastUsed === "native" || lastUsed === "tesseract") {
+        const lastUsed = localStorage.getItem("Thundocs_last_engine") as "native" | "tesseract" | "gemini" | null;
+        if (lastUsed) {
             setLocalEngine(lastUsed);
-        } else {
-            setLocalEngine("tesseract");
         }
     }, []);
 
@@ -215,180 +218,181 @@ export default function OcrMonitor() {
             <div className={`relative z-10 min-h-screen ${themeStyles.text} font-sans`}>
                 <ToolNavbar />
 
-            <div className="container mx-auto px-4 py-10 max-w-6xl">
-                {/* Header */}
-                <div className="flex items-start justify-between mb-8">
-                    <div>
-                        <h1 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
-                            <Activity className="w-8 h-8 text-cyan-400" />
-                            OCR Engine Monitor
-                        </h1>
-                        <p className="text-white/50 text-sm mt-1">
-                            Live telemetry for AI OCR extraction runs
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        {/* Local engine indicator */}
-                        <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/20 bg-white/10 backdrop-blur-xl text-xs font-medium text-white/70">
-                            <span className="relative flex h-2 w-2">
-                                <span className={cn(
-                                    "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75",
-                                    localEngine === "gemini" ? "bg-cyan-400" : "bg-slate-400"
-                                )} />
-                                <span className={cn(
-                                    "relative inline-flex rounded-full h-2 w-2",
-                                    localEngine === "gemini" ? "bg-gradient-to-r from-cyan-400 to-indigo-500" : "bg-gradient-to-r from-slate-400 to-zinc-500"
-                                )} />
-                            </span>
-                            Last used: <EngineBadge engine={localEngine} />
-                            <span className="text-white/30 text-[10px] ml-1">
-                            {localEngine === "gemini" ? "· formatted output" : "· plain text"}
-                            </span>
+                <div className="container mx-auto px-4 py-10 max-w-6xl">
+                    {/* Header */}
+                    <div className="flex items-start justify-between mb-8">
+                        <div>
+                            <h1 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
+                                <Activity className="w-8 h-8 text-cyan-400" />
+                                OCR Engine Monitor
+                            </h1>
+                            <p className="text-white/50 text-sm mt-1">
+                                Live telemetry for AI OCR extraction runs
+                            </p>
                         </div>
+                        <div className="flex items-center gap-3">
+                            {/* Local engine indicator */}
+                            <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/20 bg-white/10 backdrop-blur-xl text-xs font-medium text-white/70">
+                                <span className="relative flex h-2 w-2">
+                                    <span className={cn(
+                                        "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75",
+                                        localEngine === "gemini" ? "bg-cyan-400" : "bg-slate-400"
+                                    )} />
+                                    <span className={cn(
+                                        "relative inline-flex rounded-full h-2 w-2",
+                                        localEngine === "gemini" ? "bg-gradient-to-r from-cyan-400 to-indigo-500" : "bg-gradient-to-r from-slate-400 to-zinc-500"
+                                    )} />
+                                </span>
+                                Last used: <EngineBadge engine={localEngine} />
+                                <span className="text-white/30 text-[10px] ml-1">
+                                {localEngine === "gemini" ? "· formatted output" : "· plain text"}
+                                </span>
+                            </div>
 
-                        {/* Refresh */}
-                        <button
-                            onClick={fetchStats}
-                            className="p-2 rounded-xl border border-white/20 bg-white/10 backdrop-blur-xl hover:bg-white/20 transition-colors"
-                            title="Refresh now"
-                        >
-                            <RefreshCw className="w-4 h-4 text-white/70" />
-                        </button>
-                    </div>
-                </div>
-
-                {loading && !stats ? (
-                    <div className="flex items-center justify-center h-64 text-white/40 gap-3">
-                        <RefreshCw className="w-5 h-5 animate-spin" />
-                        Loading telemetry...
-                    </div>
-                ) : (
-                    <>
-                        {/* Stats cards */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                            <StatCard
-                                label="Total Extractions"
-                                value={stats?.total ?? 0}
-                                icon={ScanText}
-                                color="bg-gradient-to-br from-blue-400 to-indigo-600"
-                            />
-                            <StatCard
-                                label="Success Rate"
-                                value={`${stats?.successRate ?? 0}%`}
-                                icon={CheckCircle2}
-                                color="bg-gradient-to-br from-emerald-400 to-teal-600"
-                            />
-                            <StatCard
-                                label="Avg Duration"
-                                value={formatDuration(stats?.avgDurationMs ?? 0)}
-                                icon={Clock}
-                                color="bg-gradient-to-br from-orange-400 to-rose-500"
-                            />
-                            <StatCard
-                                label="AI Vision Runs"
-                                value={stats?.gemini ?? 0}
-                                sub={`${stats?.tesseract ?? 0} Standard`}
-                                icon={Zap}
-                                color="bg-gradient-to-br from-cyan-400 to-indigo-500"
-                            />
+                            {/* Refresh */}
+                            <button
+                                onClick={fetchStats}
+                                className="p-2 rounded-xl border border-white/20 bg-white/10 backdrop-blur-xl hover:bg-white/20 transition-colors"
+                                title="Refresh now"
+                            >
+                                <RefreshCw className="w-4 h-4 text-white/70" />
+                            </button>
                         </div>
+                    </div>
 
-                        {/* Engine split + recent events */}
-                        <div className="grid md:grid-cols-[280px_1fr] gap-6">
-                            {/* Donut chart */}
-                            <div className="rounded-2xl border border-white/20 bg-white/10 backdrop-blur-2xl shadow-[0_8px_32px_0_rgba(0,0,0,0.2)] p-6 flex flex-col items-center gap-4">
-                                <p className="text-sm font-semibold text-white/70 self-start">Engine Split</p>
-                                <DonutRing
-                                    gemini={stats?.gemini ?? 0}
-                                    tesseract={stats?.tesseract ?? 0}
-                                    total={stats?.total ?? 0}
+                    {loading && !stats ? (
+                        <div className="flex items-center justify-center h-64 text-white/40 gap-3">
+                            <RefreshCw className="w-5 h-5 animate-spin" />
+                            Loading telemetry...
+                        </div>
+                    ) : (
+                        <>
+                            {/* Stats cards */}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                                <StatCard
+                                    label="Total Extractions"
+                                    value={stats?.total ?? 0}
+                                    icon={ScanText}
+                                    color="bg-gradient-to-br from-blue-400 to-indigo-600"
                                 />
-                                <div className="w-full space-y-2 mt-4">
-                                    <div className="flex items-center justify-between text-[13px]">
-                                        <span className="flex items-center gap-2 text-white drop-shadow-sm font-medium">
-                                            <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-cyan-400 to-indigo-500 inline-block shadow-sm shadow-cyan-500/50" />
-                                            AI Vision
-                                        </span>
-                                        <span className="font-bold text-white drop-shadow-sm">{stats?.gemini ?? 0}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between text-[13px]">
-                                        <span className="flex items-center gap-2 text-white drop-shadow-sm font-medium">
-                                            <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-slate-400 to-zinc-500 inline-block shadow-sm shadow-slate-500/50" />
-                                            Standard
-                                        </span>
-                                        <span className="font-bold text-white drop-shadow-sm">{stats?.tesseract ?? 0}</span>
-                                    </div>
-                                </div>
+                                <StatCard
+                                    label="Success Rate"
+                                    value={`${stats?.successRate ?? 0}%`}
+                                    icon={CheckCircle2}
+                                    color="bg-gradient-to-br from-emerald-400 to-teal-600"
+                                />
+                                <StatCard
+                                    label="Avg Duration"
+                                    value={formatDuration(stats?.avgDurationMs ?? 0)}
+                                    icon={Clock}
+                                    color="bg-gradient-to-br from-orange-400 to-rose-500"
+                                />
+                                <StatCard
+                                    label="AI Vision Runs"
+                                    value={stats?.gemini ?? 0}
+                                    sub={`${stats?.tesseract ?? 0} Standard`}
+                                    icon={Zap}
+                                    color="bg-gradient-to-br from-cyan-400 to-indigo-500"
+                                />
                             </div>
 
-                            {/* Recent events */}
-                            <div className="rounded-2xl border border-white/20 bg-white/10 backdrop-blur-2xl shadow-[0_8px_32px_0_rgba(0,0,0,0.2)] p-6 flex flex-col">
-                                <div className="flex items-center justify-between mb-4">
-                                    <p className="text-sm font-semibold text-white/70">Recent Events</p>
-                                    <p className="text-[10px] text-white/30">
-                                        Auto-refreshes · last: {lastRefresh.toLocaleTimeString()}
-                                    </p>
+                            {/* Engine split + recent events */}
+                            <div className="grid md:grid-cols-[280px_1fr] gap-6">
+                                {/* Donut chart */}
+                                <div className="rounded-2xl border border-white/20 bg-white/10 backdrop-blur-2xl shadow-[0_8px_32px_0_rgba(0,0,0,0.2)] p-6 flex flex-col items-center gap-4">
+                                    <p className="text-sm font-semibold text-white/70 self-start">Engine Split</p>
+                                    <DonutRing
+                                        gemini={stats?.gemini ?? 0}
+                                        tesseract={stats?.tesseract ?? 0}
+                                        total={stats?.total ?? 0}
+                                    />
+                                    <div className="w-full space-y-2 mt-4">
+                                        <div className="flex items-center justify-between text-[13px]">
+                                            <span className="flex items-center gap-2 text-white drop-shadow-sm font-medium">
+                                                <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-cyan-400 to-indigo-500 inline-block shadow-sm shadow-cyan-500/50" />
+                                                AI Vision
+                                            </span>
+                                            <span className="font-bold text-white drop-shadow-sm">{stats?.gemini ?? 0}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-[13px]">
+                                            <span className="flex items-center gap-2 text-white drop-shadow-sm font-medium">
+                                                <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-slate-400 to-zinc-500 inline-block shadow-sm shadow-slate-500/50" />
+                                                Standard
+                                            </span>
+                                            <span className="font-bold text-white drop-shadow-sm">{stats?.tesseract ?? 0}</span>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                {!stats?.recentEvents?.length ? (
-                                    <div className="flex-1 flex flex-col items-center justify-center gap-3 text-white/30">
-                                        <BarChart3 className="w-10 h-10" />
-                                        <p className="text-sm">No events yet — run an OCR extraction to see data here</p>
+                                {/* Recent events */}
+                                <div className="rounded-2xl border border-white/20 bg-white/10 backdrop-blur-2xl shadow-[0_8px_32px_0_rgba(0,0,0,0.2)] p-6 flex flex-col">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <p className="text-sm font-semibold text-white/70">Recent Events</p>
+                                        <p className="text-[10px] text-white/30">
+                                            Auto-refreshes · last: {lastRefresh.toLocaleTimeString()}
+                                        </p>
                                     </div>
-                                ) : (
-                                    <div className="overflow-y-auto max-h-[420px] premium-scrollbar">
-                                        <table className="w-full text-xs">
-                                            <thead className="sticky top-0 bg-white/10 backdrop-blur-2xl z-10 shadow-sm before:content-[''] before:absolute before:inset-0 before:bg-[#72b4db]/80 before:backdrop-blur-xl before:-z-10 before:rounded-t-xl">
-                                                <tr className="text-white text-left text-[13px] relative z-20">
-                                                    <th className="py-3 px-4 font-semibold first:rounded-tl-xl border-b border-white/20">Engine</th>
-                                                    <th className="py-3 px-4 font-semibold border-b border-white/20">File</th>
-                                                    <th className="py-3 px-4 font-semibold border-b border-white/20">Pages</th>
-                                                    <th className="py-3 px-4 font-semibold border-b border-white/20">Duration</th>
-                                                    <th className="py-3 px-4 font-semibold border-b border-white/20">Status</th>
-                                                    <th className="py-3 px-4 font-semibold last:rounded-tr-xl border-b border-white/20">Time</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <AnimatePresence>
-                                                    {stats.recentEvents.map((evt) => (
-                                                        <motion.tr
-                                                            key={evt.id}
-                                                            initial={{ opacity: 0, x: -10 }}
-                                                            animate={{ opacity: 1, x: 0 }}
-                                                            className="border-b border-white/10 hover:bg-white/10 transition-colors text-[13px]"
-                                                        >
-                                                            <td className="py-3 px-4">
-                                                                <EngineBadge engine={evt.engine} />
-                                                            </td>
-                                                            <td className="py-3 px-4">
-                                                                <span className="flex items-center gap-2 text-white font-medium drop-shadow-sm">
-                                                                    {evt.fileType === "pdf"
-                                                                        ? <FileText className="w-4 h-4 text-rose-300 drop-shadow-sm" />
-                                                                        : <ImageIcon className="w-4 h-4 text-blue-300 drop-shadow-sm" />
+
+                                    {!stats?.recentEvents?.length ? (
+                                        <div className="flex-1 flex flex-col items-center justify-center gap-3 text-white/30">
+                                            <BarChart3 className="w-10 h-10" />
+                                            <p className="text-sm">No events yet — run an OCR extraction to see data here</p>
+                                        </div>
+                                    ) : (
+                                        <div className="overflow-y-auto max-h-[420px] premium-scrollbar">
+                                            <table className="w-full text-xs">
+                                                <thead className="sticky top-0 bg-white/10 backdrop-blur-2xl z-10 shadow-sm before:content-[''] before:absolute before:inset-0 before:bg-[#72b4db]/80 before:backdrop-blur-xl before:-z-10 before:rounded-t-xl">
+                                                    <tr className="text-white text-left text-[13px] relative z-20">
+                                                        <th className="py-3 px-4 font-semibold first:rounded-tl-xl border-b border-white/20">Engine</th>
+                                                        <th className="py-3 px-4 font-semibold border-b border-white/20">File</th>
+                                                        <th className="py-3 px-4 font-semibold border-b border-white/20">Pages</th>
+                                                        <th className="py-3 px-4 font-semibold border-b border-white/20">Duration</th>
+                                                        <th className="py-3 px-4 font-semibold border-b border-white/20">Status</th>
+                                                        <th className="py-3 px-4 font-semibold last:rounded-tr-xl border-b border-white/20">Time</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <AnimatePresence>
+                                                        {stats.recentEvents.map((evt) => (
+                                                            <motion.tr
+                                                                key={evt.id}
+                                                                initial={{ opacity: 0, x: -10 }}
+                                                                animate={{ opacity: 1, x: 0 }}
+                                                                className="border-b border-white/10 hover:bg-white/10 transition-colors text-[13px]"
+                                                            >
+                                                                <td className="py-3 px-4">
+                                                                    <EngineBadge engine={evt.engine} />
+                                                                </td>
+                                                                <td className="py-3 px-4">
+                                                                    <span className="flex items-center gap-2 text-white font-medium drop-shadow-sm">
+                                                                        {evt.fileType === "pdf"
+                                                                            ? <FileText className="w-4 h-4 text-rose-300 drop-shadow-sm" />
+                                                                            : <ImageIcon className="w-4 h-4 text-blue-300 drop-shadow-sm" />
+                                                                        }
+                                                                        {evt.fileType.toUpperCase()}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="py-3 px-4 text-white font-medium drop-shadow-sm">{evt.pagesProcessed}</td>
+                                                                <td className="py-3 px-4 text-white/90 drop-shadow-sm">{formatDuration(evt.durationMs)}</td>
+                                                                <td className="py-3 px-4">
+                                                                    {evt.success
+                                                                        ? <span className="flex items-center gap-1.5 text-emerald-300 font-medium drop-shadow-sm"><CheckCircle2 className="w-4 h-4" /> OK</span>
+                                                                        : <span className="flex items-center gap-1.5 text-rose-300 font-medium drop-shadow-sm"><XCircle className="w-4 h-4" /> Failed</span>
                                                                     }
-                                                                    {evt.fileType.toUpperCase()}
-                                                                </span>
-                                                            </td>
-                                                            <td className="py-3 px-4 text-white font-medium drop-shadow-sm">{evt.pagesProcessed}</td>
-                                                            <td className="py-3 px-4 text-white/90 drop-shadow-sm">{formatDuration(evt.durationMs)}</td>
-                                                            <td className="py-3 px-4">
-                                                                {evt.success
-                                                                    ? <span className="flex items-center gap-1.5 text-emerald-300 font-medium drop-shadow-sm"><CheckCircle2 className="w-4 h-4" /> OK</span>
-                                                                    : <span className="flex items-center gap-1.5 text-rose-300 font-medium drop-shadow-sm"><XCircle className="w-4 h-4" /> Failed</span>
-                                                                }
-                                                            </td>
-                                                            <td className="py-3 px-4 text-white/80 drop-shadow-sm">{timeAgo(evt.timestamp)}</td>
-                                                        </motion.tr>
-                                                    ))}
-                                                </AnimatePresence>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                )}
+                                                                </td>
+                                                                <td className="py-3 px-4 text-white/80 drop-shadow-sm">{timeAgo(evt.timestamp)}</td>
+                                                            </motion.tr>
+                                                        ))}
+                                                    </AnimatePresence>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                    </>
-                )}
+                        </>
+                    )}
+                </div>
             </div>
         </div>
     );
