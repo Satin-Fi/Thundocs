@@ -14,6 +14,8 @@ import SplitDownloadCard from "@/components/SplitDownloadCard";
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
+const API_BASE = import.meta.env.VITE_BACKEND_ORIGIN || "";
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Stage = "idle" | "loading" | "ready" | "converting" | "done";
 
@@ -152,7 +154,7 @@ export default function PdfToWordPage() {
     formData.append("pdf", fileRef.current);
 
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", "/api/pdf-to-word");
+    xhr.open("POST", `${API_BASE}/api/pdf-to-word`);
     xhr.responseType = "arraybuffer";
 
     xhr.onload = () => {
