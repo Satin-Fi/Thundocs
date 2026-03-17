@@ -110,22 +110,8 @@ export function createServer() {
     crossOriginEmbedderPolicy: false
   }));
 
-  const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
-    .split(",")
-    .map(o => o.trim())
-    .filter(Boolean);
-
   app.use(cors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.length === 0) {
-        // Allow non-browser clients and all origins in dev / when not configured
-        return callback(null, true);
-      }
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      return callback(new Error("Not allowed by CORS"));
-    },
+    origin: true,
     exposedHeaders: [
       "X-Original-Size",
       "X-Compressed-Size",
@@ -709,4 +695,3 @@ export function createServer() {
 
   return app;
 }
-
