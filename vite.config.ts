@@ -7,7 +7,11 @@ export default defineConfig({
   server: {
     host: "::",
     port: 8080,
-    allowedHosts: ['.ngrok-free.app'], // ✅ Add this line
+    allowedHosts: [".ngrok-free.app"],
+    proxy: {
+      "/api": "http://localhost:3000",
+      "/health": "http://localhost:3000",
+    },
   },
   build: {
     outDir: "dist/spa",

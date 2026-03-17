@@ -19,6 +19,8 @@ import {
 import { cn } from "@/lib/utils";
 import SplitDownloadCard from "@/components/SplitDownloadCard";
 
+const API_BASE = import.meta.env.VITE_BACKEND_ORIGIN || "";
+
 export default function WordToPdfPage() {
     const { themeStyles, isNight, setTheme } = useTheme();
     const [file, setFile] = useState<File | null>(null);
@@ -41,7 +43,7 @@ export default function WordToPdfPage() {
             try {
                 const formData = new FormData();
                 formData.append("file", file);
-                const res = await fetch("/api/word-thumbnail", { method: "POST", body: formData });
+                const res = await fetch(`${API_BASE}/api/word-thumbnail`, { method: "POST", body: formData });
                 if (res.ok && active) {
                     const blob = await res.blob();
                     setThumbnailUrl(URL.createObjectURL(blob));
@@ -102,7 +104,7 @@ export default function WordToPdfPage() {
             const formData = new FormData();
             formData.append("file", file);
 
-            const response = await fetch(`/api/word-to-pdf`, {
+            const response = await fetch(`${API_BASE}/api/word-to-pdf`, {
                 method: "POST",
                 body: formData,
             });
