@@ -5,7 +5,8 @@ import * as express from "express";
 const app = createServer();
 app.set("trust proxy", true);
 
-const port = process.env.PORT || 3000;
+const port = process.env.PORT;
+console.log("PORT FROM RAILWAY:", process.env.PORT);
 const host = "0.0.0.0";
 
 // In production, serve the built SPA files
