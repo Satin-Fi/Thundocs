@@ -3,11 +3,19 @@ import { createServer } from "./index";
 import * as express from "express";
 
 const app = createServer();
+app.set("trust proxy", true);
+
 const port = process.env.PORT || 3000;
+const host = "0.0.0.0";
 
 // In production, serve the built SPA files
 const __dirname = import.meta.dirname;
 const distPath = path.join(__dirname, "../spa");
+
+// Simple root route so platforms can detect HTTP server
+app.get("/", (_req, res) => {
+  res.send("Server is running");
+});
 
 // Serve static files
 app.use(express.static(distPath));
@@ -22,10 +30,16 @@ app.get("*", (req, res) => {
   res.sendFile(path.join(distPath, "index.html"));
 });
 
-app.listen(port, () => {
-  console.log(`🚀 Fusion Starter server running on port ${port}`);
-  console.log(`📱 Frontend: http://localhost:${port}`);
-  console.log(`🔧 API: http://localhost:${port}/api`);
+app.listen(port, host, () => {
+  console.log(`🚀 Server running on http://${host}:${port}`);
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("UNCAUGHT ERROR:", err);
+});
+
+process.on("unhandledRejection", (err) => {
+  console.error("UNHANDLED PROMISE:", err);
 });
 
 // Graceful shutdown
