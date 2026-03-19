@@ -5,7 +5,6 @@ COPY package*.json ./
 RUN npm install --legacy-peer-deps
 COPY . .
 RUN npm run build
-RUN npm prune --omit=dev
 EXPOSE 10000
 ENV NODE_ENV=production
 CMD ["npm","start"]
