@@ -297,7 +297,7 @@ export default function PdfToWordPage() {
               >
                 <div
                   {...getRootProps()}
-                  className={cn("relative w-full max-w-lg p-8 bg-white/5 border border-white/10 rounded-2xl shadow-lg backdrop-blur-sm", isDragActive && "bg-white/10")}
+                  className={cn("split-upload-card", isDragActive && "drag-active")}
                 >
                   <input {...getInputProps()} />
                   <div
