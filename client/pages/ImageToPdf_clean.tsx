@@ -1004,5 +1004,6 @@ export default function ImageToPdfPage() {
         />
       )}
     </div>
+  </LightningBackground>
   );
 }

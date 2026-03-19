@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import JSZip from "jszip";
+import { LightningBackground } from "@/components/LightningBackground";
 
 // Configure PDF.js worker
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -300,10 +301,10 @@ export default function PdfToImagePage() {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden pdf-to-image-bg text-white font-sans selection:bg-rose-500/30">
+    <LightningBackground className="text-white font-sans selection:bg-rose-500/30">
       <ToolNavbar />
 
-      <div className="relative z-10 container mx-auto px-4 py-8 md:py-16 flex flex-col items-center justify-center min-h-[90vh]">
+      <div className="container mx-auto px-4 py-8 md:py-16 flex flex-col items-center justify-center min-h-[90vh]">
         <div className="w-full max-w-4xl space-y-8">
 
           {/* Header */}
@@ -341,7 +342,12 @@ export default function PdfToImagePage() {
                 ) : (
                   <div
                     {...getRootProps()}
-                    className={cn("split-upload-card", isDragActive && "drag-active")}
+                    className={cn(
+                      "glass-panel rounded-3xl p-8 md:p-10 border backdrop-blur-xl shadow-[0_24px_80px_rgba(0,0,0,0.8)] transition-all duration-300 w-[360px] min-h-[520px] flex flex-col items-center justify-center text-center gap-4",
+                      isDragActive
+                        ? "border-rose-400/50 bg-slate-950/90 ring-2 ring-rose-500/30"
+                        : "border-white/10 bg-slate-950/70"
+                    )}
                     role="button"
                     aria-label="Upload PDF to extract images"
                   >
@@ -352,12 +358,12 @@ export default function PdfToImagePage() {
                         width: 50,
                         height: 50,
                         borderRadius: 15,
-                        background: "rgba(255,255,255,0.8)",
+                        background: "#000000",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         marginBottom: "1rem",
-                        boxShadow: "0 4px 10px rgba(0,0,0,0.05)",
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.35)",
                       }}
                     >
                       <svg
@@ -374,23 +380,27 @@ export default function PdfToImagePage() {
                       </svg>
                     </div>
 
-                    <h3
-                      style={{
-                        marginBottom: "0.5rem",
-                        fontWeight: 600,
-                        fontSize: "1.25rem",
-                        color: "#111827",
-                      }}
-                    >
+                    <h3 className="text-sm md:text-base font-semibold tracking-[0.18em] uppercase bg-clip-text text-transparent bg-gradient-to-r from-slate-50 to-slate-300 mb-1">
                       {isDragActive ? "Drop your PDF here" : "Upload PDF"}
                     </h3>
-                    <p style={{ fontSize: "0.875rem", color: "#666", marginBottom: 0 }}>
+                    <p style={{ fontSize: "0.875rem", color: "#9CA3AF", marginBottom: 0 }}>
                       Drag & drop PDF or click to browse
                     </p>
 
                     <button
                       type="button"
                       className="btn-main"
+                      style={{
+                        background: "#111111",
+                        color: "white",
+                        padding: "0.75rem 2.5rem",
+                        borderRadius: "9999px",
+                        fontWeight: 600,
+                        fontSize: "1rem",
+                        marginTop: "0.25rem",
+                        border: "none",
+                        cursor: "pointer",
+                      }}
                       onClick={(e) => {
                         e.stopPropagation();
                         open();
