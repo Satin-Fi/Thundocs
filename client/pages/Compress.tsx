@@ -37,6 +37,8 @@ import DropzoneDownloadPanel from "@/components/DropzoneDownloadPanel";
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
+const API_BASE = import.meta.env.VITE_BACKEND_ORIGIN || "";
+
 interface CompressionResult {
   originalSize: number;
   compressedSize: number;
@@ -307,8 +309,11 @@ export default function CompressPage() {
         params.set("force", "true");
       }
 
-      const response = await fetch(`/api/compress-pdf?${params.toString()}`, {
+      const response = await fetch(`${API_BASE}/api/compress-pdf?${params.toString()}`, {
         method: "POST",
+        headers: {
+          "Content-Type": "application/pdf",
+        },
         body: file,
       });
 
@@ -432,15 +437,15 @@ export default function CompressPage() {
               <div className={cn("transition-all duration-500", file ? "w-full" : "hero-grid")}>
                 {!file && (
                   <div className="space-y-6">
-                    <span className="label-text">The workflow</span>
+                    <span className="label-text">Compression Engine</span>
                     <div>
-                      <h1 className="hero-title">Shape Your Documents</h1>
+                      <h1 className="hero-title">Make PDFs Effortlessly Lighter</h1>
                       <p className="hero-desc">
-                        An intuitive suite of PDF utilities designed for fluidity. Merge, split, and convert with drag-and-drop simplicity.
+                        Shrink file size without losing clarity. Choose your compression level and keep your PDFs fast to send, quick to open, and easy to store.
                       </p>
                     </div>
                     <div className="text-[11px] uppercase tracking-[0.28em] text-orange-500 font-semibold">
-                      v 2.0.1 Active
+                      Compress v 2.0.1 Active
                     </div>
                   </div>
                 )}
