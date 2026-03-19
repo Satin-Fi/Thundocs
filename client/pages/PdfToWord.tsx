@@ -298,8 +298,6 @@ export default function PdfToWordPage() {
                 <div
                   {...getRootProps()}
                   className={cn("split-upload-card", isDragActive && "drag-active")}
-                  role="button"
-                  aria-label="Upload PDF to convert to Word"
                 >
                   <input {...getInputProps()} />
                   <div
@@ -576,5 +574,5 @@ export default function PdfToWordPage() {
         </div>
       </div>
     </LightningBackground>
-    </div>
+  );
 }
