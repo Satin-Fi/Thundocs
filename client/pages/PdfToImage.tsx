@@ -695,6 +695,6 @@ export default function PdfToImagePage() {
           </motion.div>
         )}
       </AnimatePresence>
-    </div >
+    </LightningBackground>
   );
 }

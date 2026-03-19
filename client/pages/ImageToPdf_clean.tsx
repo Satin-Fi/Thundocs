@@ -29,6 +29,8 @@ import ToolNavbar from "@/components/ToolNavbar";
 import { getImageFilter } from "@/utils/imageUtils";
 import SplitDownloadCard from "@/components/SplitDownloadCard";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { LightningBackground } from "@/components/LightningBackground";
+
 
 interface ImageFile {
   id: string;
@@ -507,10 +509,10 @@ export default function ImageToPdfPage() {
 
 
   return (
-    <div className="min-h-screen relative overflow-hidden compress-bg text-white font-sans selection:bg-cyan-500/30">
+    <LightningBackground className="text-white font-sans selection:bg-cyan-500/30">
       <ToolNavbar />
 
-      <div className="relative z-10 container mx-auto px-4 py-8 md:py-16 flex flex-col items-center min-h-[90vh]">
+      <div className="container mx-auto px-4 py-8 md:py-16 flex flex-col items-center min-h-[90vh]">
         <div className="w-full max-w-6xl space-y-6">
           <div className="text-center space-y-3">
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight bg-gradient-to-b from-white to-white/70 bg-clip-text text-transparent">
@@ -1003,7 +1005,6 @@ export default function ImageToPdfPage() {
           totalImages={images.length}
         />
       )}
-    </div>
   </LightningBackground>
   );
 }
