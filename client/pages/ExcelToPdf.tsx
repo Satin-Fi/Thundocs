@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import DownloadSuccessPanel from "@/components/DownloadSuccessPanel";
 import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
+import { LightningBackground } from "@/components/LightningBackground";
 
 interface SheetData {
     name: string;
@@ -253,7 +254,7 @@ export default function ExcelToPdfPage() {
     };
 
     return (
-        <div className={`min-h-screen excel-bg ${themeStyles.text} font-sans transition-colors duration-300`}>
+        <LightningBackground className={cn(themeStyles.text, "font-sans transition-colors duration-300")}>
             <ToolNavbar />
 
             <div className="container mx-auto px-4 py-8 md:py-16 flex flex-col items-center justify-center min-h-[90vh]">

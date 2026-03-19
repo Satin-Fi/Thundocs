@@ -10,6 +10,7 @@ import { Upload, FileText, X, AlertCircle, ExternalLink, Link as LinkIcon, Check
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import SplitDownloadCard from "@/components/SplitDownloadCard";
+import { LightningBackground } from "@/components/LightningBackground";
 
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
@@ -269,7 +270,7 @@ export default function PdfToWordPage() {
 
   // ─── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className={`min-h-screen pdf-to-word-bg ${themeStyles.text} font-sans`}>
+    <LightningBackground className={cn(themeStyles.text, "font-sans")}>
       <ToolNavbar />
       <div className="container mx-auto px-4 py-8 md:py-16 flex flex-col items-center justify-center min-h-[90vh]">
         <div className="w-full max-w-3xl space-y-8">
@@ -574,7 +575,6 @@ export default function PdfToWordPage() {
 
         </div>
       </div>
-
+    </LightningBackground>
     </div>
-  );
 }

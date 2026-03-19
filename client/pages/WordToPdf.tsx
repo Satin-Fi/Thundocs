@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SplitDownloadCard from "@/components/SplitDownloadCard";
+import { LightningBackground } from "@/components/LightningBackground";
 
 const API_BASE = import.meta.env.VITE_BACKEND_ORIGIN || "";
 
@@ -129,7 +130,7 @@ export default function WordToPdfPage() {
     };
 
     return (
-        <div className={`min-h-screen word-to-pdf-bg ${themeStyles.text} font-sans transition-colors duration-300`}>
+        <LightningBackground className={cn(themeStyles.text, "font-sans transition-colors duration-300")}>
             <ToolNavbar />
 
             <div className="container mx-auto px-4 py-8 md:py-16 flex flex-col items-center justify-center min-h-[90vh]">
@@ -349,6 +350,6 @@ export default function WordToPdfPage() {
                     </AnimatePresence>
                 </div>
             </div>
-        </div>
+        </LightningBackground>
     );
 }
