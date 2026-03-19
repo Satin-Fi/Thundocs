@@ -256,6 +256,30 @@ export function createServer() {
     });
   });
 
+  app.post("/api/client-error", (req: Request, res: Response) => {
+    try {
+      const { tool, message, stack, detail } = req.body || {};
+      console.error(
+        "[client-error]",
+        JSON.stringify(
+          {
+            tool: tool || "unknown",
+            message,
+            detail,
+          },
+          null,
+          2
+        )
+      );
+      if (stack) {
+        console.error("[client-error stack]", stack);
+      }
+    } catch (e) {
+      console.error("[client-error] failed to log payload", e);
+    }
+    res.status(204).end();
+  });
+
   app.post(
     "/api/compress-pdf",
     express.raw({ type: "application/pdf", limit: "150mb" }),

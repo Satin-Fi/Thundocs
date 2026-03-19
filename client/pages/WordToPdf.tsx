@@ -96,6 +96,24 @@ export default function WordToPdfPage() {
         multiple: false,
     });
 
+    const logClientError = async (tool: string, payload: any, extra?: Record<string, any>) => {
+        try {
+            await fetch(`${API_BASE}/api/client-error`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    tool,
+                    message: payload?.message || String(payload),
+                    stack: payload?.stack,
+                    detail: extra,
+                    timestamp: new Date().toISOString(),
+                }),
+            });
+        } catch {
+            // ignore logging failures
+        }
+    };
+
     const handleConvert = async () => {
         if (!file) return;
         setIsProcessing(true);
@@ -124,6 +142,7 @@ export default function WordToPdfPage() {
         } catch (err: any) {
             console.error("Word to PDF conversion error:", err);
             setError("Conversion failed. Please try again.");
+            logClientError("word-to-pdf", err);
         } finally {
             setIsProcessing(false);
         }
@@ -152,7 +171,12 @@ export default function WordToPdfPage() {
                             <div className="w-full flex justify-center">
                                 <div
                                     {...getRootProps()}
-                                    className={cn("split-upload-card", isDragActive && "drag-active")}
+                                    className={cn(
+                                        "glass-panel rounded-3xl p-8 md:p-10 border backdrop-blur-xl shadow-[0_24px_80px_rgba(0,0,0,0.8)] transition-all duration-300 w-[360px] min-h-[520px] flex flex-col items-center justify-center text-center gap-4",
+                                        isDragActive
+                                            ? "border-violet-400/50 bg-slate-950/90 ring-2 ring-violet-500/30"
+                                            : "border-white/10 bg-slate-950/70"
+                                    )}
                                     role="button"
                                     aria-label="Upload Word document"
                                 >
@@ -163,12 +187,12 @@ export default function WordToPdfPage() {
                                             width: 50,
                                             height: 50,
                                             borderRadius: 15,
-                                            background: "rgba(255,255,255,0.8)",
+                                            background: "#000000",
                                             display: "flex",
                                             alignItems: "center",
                                             justifyContent: "center",
                                             marginBottom: "1rem",
-                                            boxShadow: "0 4px 10px rgba(0,0,0,0.05)",
+                                            boxShadow: "0 4px 12px rgba(0,0,0,0.35)",
                                         }}
                                     >
                                         <svg
@@ -186,22 +210,28 @@ export default function WordToPdfPage() {
                                     </div>
 
                                     <h3
-                                        style={{
-                                            marginBottom: "0.5rem",
-                                            fontWeight: 600,
-                                            fontSize: "1.25rem",
-                                            color: "#111827",
-                                        }}
+                                        className="text-sm md:text-base font-semibold tracking-[0.18em] uppercase bg-clip-text text-transparent bg-gradient-to-r from-slate-50 to-slate-300 mb-1"
                                     >
                                         {isDragActive ? "Drop Word file here" : "Upload Word file"}
                                     </h3>
-                                    <p style={{ fontSize: "0.875rem", color: "#666", marginBottom: 0 }}>
+                                    <p style={{ fontSize: "0.875rem", color: "#9CA3AF", marginBottom: 0 }}>
                                         Drag & drop .doc/.docx or click to browse
                                     </p>
 
                                     <button
                                         type="button"
                                         className="btn-main"
+                                        style={{
+                                            background: "#111111",
+                                            color: "white",
+                                            padding: "0.75rem 2.5rem",
+                                            borderRadius: "9999px",
+                                            fontWeight: 600,
+                                            fontSize: "1rem",
+                                            marginTop: "0.25rem",
+                                            border: "none",
+                                            cursor: "pointer",
+                                        }}
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             open();
@@ -276,12 +306,12 @@ export default function WordToPdfPage() {
                                             </p>
                                         </div>
 
-                                        {error && (
-                                            <div className="w-full p-3 rounded-xl bg-red-500/10 border border-red-500/20 flex items-start gap-2">
-                                                <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                                                <span className="text-red-400 text-sm">{error}</span>
-                                            </div>
-                                        )}
+                    {error && import.meta.env.DEV && (
+                        <div className="w-full p-3 rounded-xl bg-red-500/10 border border-red-500/20 flex items-start gap-2">
+                            <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                            <span className="text-red-400 text-sm">{error}</span>
+                        </div>
+                    )}
 
                                         {/* Convert button */}
                                         <div className="w-full flex justify-center">
