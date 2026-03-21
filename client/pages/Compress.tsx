@@ -33,11 +33,14 @@ import {
 } from "lucide-react";
 import { UploadingRing } from "@/components/UploadingRing";
 import DropzoneDownloadPanel from "@/components/DropzoneDownloadPanel";
+import { PDFDocument } from "pdf-lib";
 
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
-const API_BASE = import.meta.env.VITE_BACKEND_ORIGIN || "";
+const API_BASE =
+  import.meta.env.VITE_BACKEND_ORIGIN ||
+  "https://thundocs-backend.onrender.com";
 
 interface CompressionResult {
   originalSize: number;
@@ -52,6 +55,13 @@ interface CompressionResult {
     actualJpegQ: number;
     isForced: boolean;
   };
+}
+
+interface BrowserCompressionResult {
+  blob: Blob;
+  actualDpi: number;
+  actualJpegQ: number;
+  isForced: boolean;
 }
 
 function PdfViewer({ url }: { url: string }) {
@@ -264,8 +274,121 @@ export default function CompressPage() {
     }
   };
 
+  const compressPdfInBrowser = async (
+    selectedFile: File,
+    targetDpi: number,
+    jpegQualityPercent: number,
+    targetColorMode: "color" | "grayscale",
+    requestedTargetSizeKb: number | null,
+    forceMode: boolean
+  ): Promise<BrowserCompressionResult> => {
+    const arrayBuffer = await selectedFile.arrayBuffer();
+    const srcPdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const targetBytes = requestedTargetSizeKb ? Math.floor(requestedTargetSizeKb * 1024) : null;
+
+    const runPass = async (passDpi: number, passQualityPercent: number) => {
+      const outPdf = await PDFDocument.create();
+      const scale = Math.max(0.45, Math.min(3, passDpi / 72));
+      const jpegQuality = Math.max(0.12, Math.min(0.95, passQualityPercent / 100));
+
+      for (let i = 1; i <= srcPdf.numPages; i++) {
+        setProgress((prev) => Math.max(prev, Math.min(98, 20 + Math.round((i / srcPdf.numPages) * 70))));
+        const page = await srcPdf.getPage(i);
+        const viewport = page.getViewport({ scale });
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.floor(viewport.width));
+        canvas.height = Math.max(1, Math.floor(viewport.height));
+        const ctx = canvas.getContext("2d");
+        if (!ctx) continue;
+
+        await page.render({ canvasContext: ctx, viewport } as any).promise;
+
+        if (targetColorMode === "grayscale") {
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const data = imageData.data;
+          for (let p = 0; p < data.length; p += 4) {
+            const g = Math.round(data[p] * 0.299 + data[p + 1] * 0.587 + data[p + 2] * 0.114);
+            data[p] = g;
+            data[p + 1] = g;
+            data[p + 2] = g;
+          }
+          ctx.putImageData(imageData, 0, 0);
+        }
+
+        const dataUrl = canvas.toDataURL("image/jpeg", jpegQuality);
+        const base64 = dataUrl.split(",")[1];
+        const embedded = await outPdf.embedJpg(base64);
+        const widthPts = page.getViewport({ scale: 1 }).width;
+        const heightPts = page.getViewport({ scale: 1 }).height;
+        const outPage = outPdf.addPage([widthPts, heightPts]);
+        outPage.drawImage(embedded, { x: 0, y: 0, width: widthPts, height: heightPts });
+      }
+
+      const outBytes = await outPdf.save({ useObjectStreams: true });
+      return {
+        blob: new Blob([outBytes], { type: "application/pdf" }),
+        actualDpi: passDpi,
+        actualJpegQ: passQualityPercent,
+      };
+    };
+
+    if (!targetBytes) {
+      const singlePass = await runPass(targetDpi, jpegQualityPercent);
+      return { ...singlePass, isForced: forceMode };
+    }
+
+    const profiles = forceMode
+      ? [
+          { dpi: Math.min(targetDpi, 72), q: Math.min(jpegQualityPercent, 40) },
+          { dpi: 60, q: 34 },
+          { dpi: 52, q: 28 },
+          { dpi: 44, q: 22 },
+          { dpi: 36, q: 16 },
+        ]
+      : [
+          { dpi: targetDpi, q: jpegQualityPercent },
+          { dpi: Math.round(targetDpi * 0.86), q: Math.max(18, jpegQualityPercent - 12) },
+          { dpi: Math.round(targetDpi * 0.75), q: Math.max(16, jpegQualityPercent - 20) },
+          { dpi: Math.round(targetDpi * 0.62), q: Math.max(14, jpegQualityPercent - 28) },
+          { dpi: Math.round(targetDpi * 0.52), q: Math.max(12, jpegQualityPercent - 36) },
+        ];
+
+    let bestUnder: { blob: Blob; actualDpi: number; actualJpegQ: number } | null = null;
+    let smallestOverall: { blob: Blob; actualDpi: number; actualJpegQ: number } | null = null;
+
+    for (const profile of profiles) {
+      const candidate = await runPass(profile.dpi, profile.q);
+      if (!smallestOverall || candidate.blob.size < smallestOverall.blob.size) {
+        smallestOverall = candidate;
+      }
+      if (candidate.blob.size <= targetBytes) {
+        if (!bestUnder || candidate.blob.size > bestUnder.blob.size) {
+          bestUnder = candidate;
+        }
+      }
+      if (bestUnder && candidate.blob.size < targetBytes * 0.85) {
+        continue;
+      }
+      if (bestUnder && candidate.blob.size <= targetBytes) {
+        break;
+      }
+    }
+
+    if (bestUnder) return { ...bestUnder, isForced: forceMode };
+    if (smallestOverall) return { ...smallestOverall, isForced: forceMode };
+    const fallbackPass = await runPass(targetDpi, jpegQualityPercent);
+    return { ...fallbackPass, isForced: forceMode };
+  };
+
   const handleCompress = async (force: boolean = false) => {
     if (!file || isUploading) return;
+    const trimmedTarget = targetSizeKb.trim();
+    const targetSizeKbValue =
+      trimmedTarget !== ""
+        ? targetUnit === "MB"
+          ? Number(trimmedTarget) * 1024
+          : Number(trimmedTarget)
+        : null;
 
     // Immediate UI feedback: collapse the settings panel
     setShowDetails(false);
@@ -285,8 +408,6 @@ export default function CompressPage() {
     }, 100);
 
     try {
-      const trimmedTarget = targetSizeKb.trim();
-
       const params = new URLSearchParams();
       // Keep a reasonable default bucket for DPI/pdfSettings,
       // but drive JPEG quality directly via jpegQ.
@@ -299,11 +420,8 @@ export default function CompressPage() {
       params.set("jpegQ", qualityPercent.toString());
       params.set("dpi", dpi.toString());
       params.set("colorMode", colorMode);
-      if (trimmedTarget !== "") {
-        const finalKb = targetUnit === "MB"
-          ? (Number(trimmedTarget) * 1024).toString()
-          : trimmedTarget;
-        params.set("targetSizeKb", finalKb);
+      if (targetSizeKbValue && Number.isFinite(targetSizeKbValue) && targetSizeKbValue > 0) {
+        params.set("targetSizeKb", String(Math.floor(targetSizeKbValue)));
       }
       if (force) {
         params.set("force", "true");
@@ -321,7 +439,48 @@ export default function CompressPage() {
       setProgress(100);
 
       if (!response.ok) {
-        setError("Failed to compress PDF");
+        try {
+          const errJson = await response.json();
+          console.error("Compress API failed, falling back to browser compression:", errJson);
+        } catch {
+          console.error("Compress API failed, falling back to browser compression");
+        }
+        const fallbackResult = await compressPdfInBrowser(
+          file,
+          dpi,
+          qualityPercent,
+          colorMode,
+          targetSizeKbValue,
+          force
+        );
+        const originalSize = file.size;
+        const compressedSize = fallbackResult.blob.size;
+        const ratio = Math.round((1 - compressedSize / originalSize) * 100);
+        setCompressedBlob(fallbackResult.blob);
+        if (downloadUrl) URL.revokeObjectURL(downloadUrl);
+        const fallbackUrl = URL.createObjectURL(fallbackResult.blob);
+        setDownloadUrl(fallbackUrl);
+        setDownloadName(file ? `compressed_${file.name.replace(/\.[^/.]+$/, "")} - Thundocs.pdf` : "compressed - Thundocs.pdf");
+        setResult({
+          originalSize,
+          compressedSize,
+          ratio,
+          settings: {
+            dpi,
+            qualityPercent,
+            colorMode,
+            targetSizeKb: targetSizeKbValue,
+            actualDpi: fallbackResult.actualDpi,
+            actualJpegQ: fallbackResult.actualJpegQ,
+            isForced: fallbackResult.isForced,
+          },
+        });
+        setDpi(Math.round(fallbackResult.actualDpi));
+        setQualityPercent(Math.round(fallbackResult.actualJpegQ));
+        if (targetSizeKbValue) {
+          setTargetMode(fallbackResult.isForced ? "force" : "safe");
+        }
+        setProgress(100);
         setIsCompressing(false);
         return;
       }
@@ -342,16 +501,8 @@ export default function CompressPage() {
         file ? `compressed_${file.name.replace(/\.[^/.]+$/, "")} - Thundocs.pdf` : "compressed - Thundocs.pdf"
       );
 
-      let targetBytes: number | null = null;
-      if (trimmedTarget !== "") {
-        const numeric = Number(trimmedTarget);
-        if (!Number.isNaN(numeric) && numeric > 0) {
-          targetBytes = Math.floor(numeric * 1024);
-        }
-      }
-
       const actualDpi = parseInt(response.headers.get("X-Actual-DPI") || "0", 10) || dpi;
-      const actualJpegQ = parseInt(response.headers.get("X-Actual-JpegQ") || "0", 10);
+      const actualJpegQ = parseInt(response.headers.get("X-Actual-JpegQ") || "0", 10) || qualityPercent;
       const isForced = response.headers.get("X-Is-Forced") === "true";
 
       setResult({
@@ -362,12 +513,17 @@ export default function CompressPage() {
           dpi,
           qualityPercent,
           colorMode,
-          targetSizeKb: trimmedTarget !== "" ? Number(trimmedTarget) : null,
+          targetSizeKb: targetSizeKbValue,
           actualDpi,
           actualJpegQ,
-          isForced: force,
+          isForced,
         },
       });
+      setDpi(Math.round(actualDpi));
+      setQualityPercent(Math.round(actualJpegQ));
+      if (targetSizeKbValue) {
+        setTargetMode(isForced ? "force" : "safe");
+      }
 
       // Generate compressed-output thumbnail
       try {
@@ -388,8 +544,48 @@ export default function CompressPage() {
       setIsCompressing(false);
     } catch (err) {
       clearInterval(interval);
-      setIsCompressing(false);
-      setError("Failed to compress PDF");
+      try {
+        const fallbackResult = await compressPdfInBrowser(
+          file,
+          dpi,
+          qualityPercent,
+          colorMode,
+          targetSizeKbValue,
+          force
+        );
+        const originalSize = file.size;
+        const compressedSize = fallbackResult.blob.size;
+        const ratio = Math.round((1 - compressedSize / originalSize) * 100);
+        setCompressedBlob(fallbackResult.blob);
+        if (downloadUrl) URL.revokeObjectURL(downloadUrl);
+        const fallbackUrl = URL.createObjectURL(fallbackResult.blob);
+        setDownloadUrl(fallbackUrl);
+        setDownloadName(file ? `compressed_${file.name.replace(/\.[^/.]+$/, "")} - Thundocs.pdf` : "compressed - Thundocs.pdf");
+        setResult({
+          originalSize,
+          compressedSize,
+          ratio,
+          settings: {
+            dpi,
+            qualityPercent,
+            colorMode,
+            targetSizeKb: targetSizeKbValue,
+            actualDpi: fallbackResult.actualDpi,
+            actualJpegQ: fallbackResult.actualJpegQ,
+            isForced: fallbackResult.isForced,
+          },
+        });
+        setDpi(Math.round(fallbackResult.actualDpi));
+        setQualityPercent(Math.round(fallbackResult.actualJpegQ));
+        if (targetSizeKbValue) {
+          setTargetMode(fallbackResult.isForced ? "force" : "safe");
+        }
+        setProgress(100);
+      } catch {
+        setError("Failed to compress PDF");
+      } finally {
+        setIsCompressing(false);
+      }
     }
   };
 
@@ -901,7 +1097,8 @@ export default function CompressPage() {
                                 <div className="flex flex-col gap-0.5">
                                   <span className="text-[9px] uppercase text-slate-400 font-bold tracking-wider">Image Quality</span>
                                   <span className="font-bold text-slate-700">
-                                    {result.settings.isForced ? "Forced Lossy" : `${result.settings.qualityPercent}%`}
+                                    {result.settings.actualJpegQ}%
+                                    {result.settings.isForced ? " (Forced Lossy)" : ""}
                                   </span>
                                 </div>
                                 <div className="flex flex-col gap-0.5">

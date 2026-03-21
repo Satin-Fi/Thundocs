@@ -310,7 +310,17 @@ export function createServer() {
         res.send(result.bytes);
       } catch (error: any) {
         console.error("Internal Compress Error:", error);
-        res.status(500).json({ error: "Failed to compress PDF", details: error.message });
+        const msg = String(error?.message || "");
+        const lower = msg.toLowerCase();
+        if (lower.includes("enoent") && (lower.includes("gswin") || lower.includes("ghostscript") || lower.includes("gs "))) {
+          res.status(500).json({
+            error: "Ghostscript binary not found on the server.",
+            ghostscriptNotFound: true,
+            details: msg,
+          });
+        } else {
+          res.status(500).json({ error: "Failed to compress PDF", details: msg });
+        }
       }
     }
   );

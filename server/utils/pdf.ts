@@ -133,6 +133,9 @@ export async function compressPdf(
         inputPath,
       ];
       const proc = spawn(gsBin, args);
+      proc.on("error", (err) => {
+        reject(err);
+      });
       proc.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`GS Error ${code}`))));
     });
 
@@ -193,6 +196,9 @@ export async function compressPdf(
                 inputPath,
               ];
               const proc = spawn(gsBin, args);
+              proc.on("error", (err) => {
+                reject(err);
+              });
               proc.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`GS Raster Error ${code}`))));
             });
 

@@ -1,5 +1,15 @@
 FROM node:22-bullseye
-RUN apt-get update && apt-get install -y --no-install-recommends libreoffice-writer && rm -rf /var/lib/apt/lists/*
+
+# Install document processing binaries used by the backend
+# - libreoffice-writer: PDF↔Word conversions
+# - ghostscript: PDF compression (gs)
+# - qpdf: PDF protection/unlocking
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+    libreoffice-writer \
+    ghostscript \
+    qpdf \
+  && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY package*.json ./
 RUN npm install --legacy-peer-deps
